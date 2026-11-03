@@ -9,8 +9,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Serves a screenshot, but only to people who can see the ticket. */
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
+    const params = await ctx.params;
     const me = await requireUser(req);
     if (!isGuid(params.id)) throw new HttpError(404, "Not found");
     const [a] = await query(

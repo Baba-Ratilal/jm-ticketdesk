@@ -8,8 +8,9 @@ import { getVisibleTicket, isStaff, logEvent, requireStaff, requireUser } from "
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
+    const params = await ctx.params;
     const me = await requireUser(req);
     const ticket = await getVisibleTicket(params.id, me);
     const isAdmin = isStaff(me); // admins and IT team see internal notes
@@ -49,8 +50,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  * IT-team members can only work on tickets assigned to them or unassigned, may assign a ticket to themselves,
  * and may hand their own ticket back to the pool. Admins can assign to anyone.
  */
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
+    const params = await ctx.params;
     const me = await requireStaff(req);
     const ticket = await getVisibleTicket(params.id, me);
     if (me.role === "agent" && ticket.assigned_to && ticket.assigned_to !== me.id)

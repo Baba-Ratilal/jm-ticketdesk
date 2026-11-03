@@ -16,8 +16,9 @@ Plan for ~2–3 hours the first time, outside working hours.
 
 ## 1. Install the prerequisites (once)
 
-1. **Node.js 22 LTS** — nodejs.org, "Windows Installer (.msi)", default options (it adds itself to the system PATH). Check: open a *new* PowerShell → `node -v`.
-2. **IIS URL Rewrite** and **Application Request Routing (ARR) 3.0** — download both installers from iis.net.
+1. **Node.js LTS (22 or newer)** — nodejs.org, "Windows Installer (.msi)", default options (it adds itself to the system PATH). Check: open a *new* PowerShell → `node -v`.
+2. **Git for Windows** — git-scm.com, default options. Check: new PowerShell → `git --version`.
+3. **IIS URL Rewrite** and **Application Request Routing (ARR) 3.0** — download both installers from iis.net.
    After installing: IIS Manager → click the **server name** (top of the tree) → *Application Request Routing Cache* → *Server Proxy Settings* → tick **Enable proxy** → Apply.
    (This does not change how the HRMS site works; it only allows sites that have a rewrite rule pointing at another address to proxy.)
 
@@ -48,7 +49,7 @@ See `NOTE-FOR-IT-VENDOR.md`. Result you need: `https://helpdesk.jmaluminium.com`
 
 ## 5. Install the app
 
-1. Copy this whole folder to the server, e.g. `D:\apps\ticketdesk`.
+1. Put the app on the server, e.g. `D:\apps\ticketdesk`. The easiest way is `git clone` (see **Updating later (Git)** below); copying this folder also works.
 2. Create the screenshot folder, e.g. `D:\TicketDeskFiles`.
 3. In the app folder: copy `.env.example` → `.env.local` and fill it in (every line is explained in the file). Put your own email in `INITIAL_ADMIN_EMAILS`.
 4. In an elevated PowerShell in the app folder:
@@ -81,9 +82,37 @@ Open `https://helpdesk.jmaluminium.com` → *Sign in with Microsoft*. You become
 
 Back up **both**: the `TicketDesk` database and the screenshot folder (`UPLOAD_DIR`). Add them to the backup you already run for the HRMS.
 
-## Updating later
+## Updating later (Git)
 
-Copy the new files over the old ones (keep `.env.local` and `logs\`), then run `.\deploy\update.ps1` in an elevated PowerShell.
+The code lives in a **private GitHub repository**. The server only *pulls* from it. The database, the screenshot folder and `.env.local` are not in Git, so an update never touches your data.
+
+**One-time setup (on your Mac)**
+1. On github.com create a **private** repository, for example `jm-ticketdesk` (leave it empty).
+2. Unzip the app, then in Terminal inside the folder:
+   ```
+   git remote add origin https://github.com/<your-account>/jm-ticketdesk.git
+   git branch -M main
+   git push -u origin main
+   ```
+
+**One-time setup (on the server)**
+1. Install **Git for Windows** (git-scm.com). (You install it in section 1.)
+2. Give the server read-only access to the repository: on GitHub open the repository → *Settings → Deploy keys → Add deploy key*, with a key made on the server by `ssh-keygen -t ed25519` (leave the passphrase empty, paste the `.pub` file). Tick nothing for write access.
+3. Instead of copying the folder in step 5, clone it:
+   ```powershell
+   git clone git@github.com:<your-account>/jm-ticketdesk.git D:\apps\ticketdesk
+   ```
+   then continue with `.env.local`, `npm ci`, `npm run build` and `install-task.ps1` as in step 5.
+
+**Every update**
+1. On your Mac: put the new files in the folder, then `git add -A`, `git commit -m "what changed"`, `git push`.
+2. On the server, in an elevated PowerShell in the app folder: `.\deploy\update.ps1`
+
+The script stops the app, pulls, rebuilds and restarts it (about two minutes). If the build fails it puts the previous version back by itself. If the update includes database changes it lists the `deploy\upgrade-*.sql` files to run **once** in SSMS.
+
+**Going back to an older version:** `git log --oneline` shows versions; then `.\deploy\update.ps1 -Version <the short code>`. To return to the latest, run `.\deploy\update.ps1` with no version.
+
+Do not edit files on the server by hand; the script refuses to update if you did.
 
 ## If something goes wrong
 

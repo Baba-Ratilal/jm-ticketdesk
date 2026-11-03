@@ -50,7 +50,7 @@ export async function storeFiles(
   await fs.mkdir(dir, { recursive: true });
   for (const f of files) {
     const stored = `${crypto.randomUUID()}.${f.ext}`;
-    await fs.writeFile(path.join(dir, stored), f.buf, { flag: "wx" });
+    await fs.writeFile(path.join(/*turbopackIgnore: true*/ dir, stored), f.buf, { flag: "wx" });
     await query(
       `INSERT INTO dbo.ticket_attachments (ticket_id, comment_id, stored_name, file_name, mime, size_bytes, uploaded_by)
        VALUES (@t, @c, @s, @n, @m, @z, @u)`,

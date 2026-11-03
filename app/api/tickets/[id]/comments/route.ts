@@ -8,8 +8,9 @@ import { getVisibleTicket, isStaff, logEvent, requireUser } from "@/lib/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
+    const params = await ctx.params;
     const me = await requireUser(req);
     const ticket = await getVisibleTicket(params.id, me);
     const isAdmin = isStaff(me);

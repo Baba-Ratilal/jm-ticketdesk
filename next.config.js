@@ -2,10 +2,8 @@
 module.exports = {
   reactStrictMode: true,
   poweredByHeader: false,
-  experimental: {
-    // keep the SQL driver out of the bundle
-    serverComponentsExternalPackages: ["mssql", "tedious"],
-  },
+  // keep the SQL driver out of the bundle
+  serverExternalPackages: ["mssql", "tedious"],
   async headers() {
     return [
       {

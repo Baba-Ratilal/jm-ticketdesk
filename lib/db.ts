@@ -19,6 +19,9 @@ function config(): sql.config {
     options: {
       encrypt: process.env.MSSQL_ENCRYPT === "true",
       trustServerCertificate: process.env.MSSQL_TRUST_CERT !== "false",
+      // Windows Server 2025 offers TLS 1.3, which older SQL Server builds cannot answer.
+      // Capping at TLS 1.2 is safe for every SQL Server version. Set MSSQL_TLS_MAX=TLSv1.3 to lift it.
+      cryptoCredentialsDetails: { maxVersion: (process.env.MSSQL_TLS_MAX || "TLSv1.2") as any },
       instanceName: instance,
     },
     pool: { max: 10, min: 0, idleTimeoutMillis: 30_000 },

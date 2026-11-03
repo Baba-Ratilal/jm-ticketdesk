@@ -7,8 +7,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Admin only: set role (user / IT team / admin), phone number, or disable / enable an account. */
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
+    const params = await ctx.params;
     await requireAdmin(req);
     if (!isGuid(params.id)) throw new HttpError(404, "User not found");
     const body = await req.json().catch(() => ({}));
