@@ -10,7 +10,7 @@ type Ev = "created" | "assigned" | "status" | "comment";
 export async function notifyEvent(event: Ev, ticketId: string, actorId: string, extra?: { status?: string }) {
   const [t] = await query("SELECT * FROM dbo.tickets WHERE id=@id", { id: ticketId });
   if (!t) return;
-  const users = await query("SELECT id, email, full_name, role FROM dbo.users WHERE id IN (@a, @c) OR id = @s", {
+  const users = await query("SELECT id, login_id, email, full_name, role FROM dbo.users WHERE id IN (@a, @c) OR id = @s", {
     a: actorId,
     c: t.created_by,
     s: t.assigned_to ?? actorId,
@@ -32,8 +32,10 @@ export async function notifyEvent(event: Ev, ticketId: string, actorId: string, 
   const supportInbox = async (): Promise<string[]> => {
     const configured = (process.env.ADMIN_ALERT_EMAILS || "").split(",").map((s) => s.trim()).filter(Boolean);
     if (configured.length) return configured;
-    const admins = await query<{ email: string }>("SELECT email FROM dbo.users WHERE role IN ('admin','agent') AND active=1");
-    return admins.map((a) => a.email);
+    const admins = await query<{ email: string | null }>(
+      "SELECT email FROM dbo.users WHERE role IN ('admin','agent') AND active=1 AND email IS NOT NULL"
+    );
+    return admins.map((a) => a.email as string);
   };
 
   const jobs: Promise<unknown>[] = [];
@@ -47,7 +49,7 @@ export async function notifyEvent(event: Ev, ticketId: string, actorId: string, 
           ...common,
           heading: "New ticket raised",
           lines: [
-            `<b>${esc(creator?.full_name || creator?.email || "")}</b> (${esc([t.unit, t.department].filter(Boolean).join(" · "))})`,
+            `<b>${esc(creator?.full_name || creator?.login_id || creator?.email || "")}</b> (${esc([t.unit, t.department].filter(Boolean).join(" · "))})`,
             `<b>${esc(t.type)}</b> · ${esc(t.category)} · Priority: <b>${esc(t.priority)}</b>`,
             esc(String(t.description)).slice(0, 400).replace(/\n/g, "<br>"),
           ],
@@ -78,7 +80,7 @@ export async function notifyEvent(event: Ev, ticketId: string, actorId: string, 
           heading: "A ticket was assigned to you",
           lines: [
             `<b>${esc(t.type)}</b> · ${esc(t.category)} · Priority: <b>${esc(t.priority)}</b>`,
-            `Raised by ${esc(creator?.full_name || creator?.email || "")}`,
+            `Raised by ${esc(creator?.full_name || creator?.login_id || creator?.email || "")}`,
           ],
         })
       )
@@ -91,7 +93,7 @@ export async function notifyEvent(event: Ev, ticketId: string, actorId: string, 
           emailTemplate({
             ...common,
             heading: "Your ticket has been assigned",
-            lines: [`<b>${esc(assignee.full_name || assignee.email)}</b> is now working on it.`],
+            lines: [`<b>${esc(assignee.full_name || assignee.login_id || assignee.email)}</b> is now working on it.`],
           })
         )
       );
@@ -135,7 +137,7 @@ export async function notifyEvent(event: Ev, ticketId: string, actorId: string, 
           emailTemplate({
             ...common,
             heading: "The user replied",
-            lines: [`<b>${esc(actor?.full_name || actor?.email || "")}</b> added a reply to this ticket.`],
+            lines: [`<b>${esc(actor?.full_name || actor?.login_id || actor?.email || "")}</b> added a reply to this ticket.`],
           })
         )
       );

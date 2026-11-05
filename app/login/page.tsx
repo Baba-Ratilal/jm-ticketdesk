@@ -8,25 +8,35 @@ import { api } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     // already signed in? go straight to the app
     api("/api/me").then(() => router.replace("/")).catch(() => {});
-    const code = new URLSearchParams(window.location.search).get("error");
-    if (code) {
-      setError(
-        code === "AccessDenied"
-          ? "This account can't use TicketDesk. Please sign in with your company Microsoft account (@jmaluminium.com or @jmaluminium.in), or ask IT if your account was disabled."
-          : "Sign-in failed. Please try again."
-      );
-    }
   }, [router]);
 
-  function go() {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
     setBusy(true);
-    signIn("azure-ad", { callbackUrl: "/" });
+    try {
+      const res = await signIn("credentials", { loginId, password, redirect: false });
+      if (res?.ok && !res.error) {
+        router.replace("/");
+        return;
+      }
+      setError(
+        res?.error === "LOCKED"
+          ? "Too many wrong attempts. This account is locked for 15 minutes — try again later or ask IT."
+          : "Wrong user ID or password, or the account is disabled."
+      );
+    } catch {
+      setError("Could not sign in. Please try again.");
+    }
+    setBusy(false);
   }
 
   return (
@@ -40,26 +50,46 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="card pad form">
+        <form className="card pad form" onSubmit={submit}>
           <div>
             <h2 style={{ fontSize: 18 }}>Sign in</h2>
-            <p className="sub" style={{ marginTop: 4 }}>
-              Use the same Microsoft account you use for your company email.
-            </p>
+            <p className="sub" style={{ marginTop: 4 }}>Use your ERP user ID and password.</p>
           </div>
 
           {error && <p className="alert bad">{error}</p>}
 
-          <button onClick={go} disabled={busy} className="btn block" style={{ padding: "12px 14px" }}>
-            <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
-              <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-              <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-              <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-              <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-            </svg>
-            {busy ? "Redirecting to Microsoft…" : "Sign in with Microsoft"}
+          <div>
+            <label className="lbl" htmlFor="f_login">User ID</label>
+            <input
+              className="in"
+              id="f_login"
+              name="loginId"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoFocus
+              required
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="lbl" htmlFor="f_pw">Password</label>
+            <input
+              className="in"
+              id="f_pw"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          <button type="submit" disabled={busy} className="btn pri block" style={{ padding: "12px 14px" }}>
+            {busy ? "Signing in…" : "Sign in"}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

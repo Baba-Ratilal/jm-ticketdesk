@@ -29,7 +29,7 @@ function Users() {
     }
   }
 
-  const shown = users.filter((u) => `${u.full_name} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
+  const shown = users.filter((u) => `${u.full_name} ${u.login_id} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
@@ -37,12 +37,12 @@ function Users() {
         <div>
           <h1>Users</h1>
           <p className="sub">
-            {users.length} people have signed in · IT-team members work on assigned tickets; admins manage everything. Add a phone number for each IT-team member so requesters can call them.
+            {users.length} people · IT-team members work on assigned tickets; admins manage everything. Add a phone number for each IT-team member so requesters can call them.
           </p>
         </div>
         <div className="search" style={{ flex: "0 1 280px" }}>
           <Icon name="search" size={16} />
-          <input className="in" placeholder="Search name or email" aria-label="Search users" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="in" placeholder="Search name or user ID" aria-label="Search users" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       </div>
 
@@ -63,14 +63,14 @@ function Users() {
               <tr key={u.id} style={u.active === false ? { opacity: 0.55 } : undefined}>
                 <td className="first">
                   <div className="nm">{u.full_name}</div>
-                  <div className="meta">{u.email}</div>
+                  <div className="meta">{[u.login_id, u.email].filter(Boolean).join(" · ")}</div>
                 </td>
                 <td data-l="Unit / Dept">{[u.unit, u.department].filter(Boolean).join(" · ") || "—"}</td>
                 <td data-l="Last sign-in">{u.last_login ? fmtDate(u.last_login) : "—"}</td>
                 <td data-l="Role">
                   <select
                     className="in sel"
-                    aria-label={`Role for ${u.full_name || u.email}`}
+                    aria-label={`Role for ${u.full_name || u.login_id || u.email}`}
                     style={{ padding: "6px 9px", minWidth: 120 }}
                     value={u.role}
                     onChange={(e) =>
@@ -90,7 +90,7 @@ function Users() {
                     <input
                       className="in"
                       style={{ padding: "6px 9px", minWidth: 130 }}
-                      aria-label={`Phone for ${u.full_name || u.email}`}
+                      aria-label={`Phone for ${u.full_name || u.login_id || u.email}`}
                       placeholder="+91 …"
                       defaultValue={u.phone || ""}
                       onBlur={(e) => {
@@ -109,7 +109,7 @@ function Users() {
                       ) : (
                         <button
                           className="btn sm danger"
-                          onClick={() => patch(u, { active: false }, `Disable ${u.full_name || u.email}? They won't be able to sign in.`)}
+                          onClick={() => patch(u, { active: false }, `Disable ${u.full_name || u.login_id || u.email}? They won't be able to sign in.`)}
                         >
                           Disable
                         </button>

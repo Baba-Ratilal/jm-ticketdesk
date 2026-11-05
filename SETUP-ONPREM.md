@@ -1,8 +1,8 @@
 # JM TicketDesk — Office Server Setup (Windows Server + SQL Server)
 
-This version runs entirely on your own server: **SQL Server** for data, a **folder** for screenshots, **Microsoft sign-in** for login, and **Outlook (Microsoft Graph)** for email. IIS sits in front and provides HTTPS.
+This version runs entirely on your own server: **SQL Server** for data (signing in with **Windows authentication**, so no SQL password exists), a **folder** for screenshots, **ERP user ID + password** for login (the user list is copied from the ERP's Oracle database every night at 12 AM), and optionally **Outlook (Microsoft Graph)** for email alerts.
 
-It is built to live **beside** the HRMS without touching it: its own database, its own SQL login, its own IIS site, its own port (3100, reachable only from the server itself).
+It is built to live **beside** the HRMS without touching it: its own database, its own access rights (only that database), and its own port (3100). IIS in front is optional and provides HTTPS.
 
 Plan for ~2–3 hours the first time, outside working hours.
 
@@ -12,11 +12,12 @@ Plan for ~2–3 hours the first time, outside working hours.
 
 - Take a **snapshot/backup** of the server (or at least the SQL databases and IIS config).
 - Tell your IT vendor what they need to do: see `NOTE-FOR-IT-VENDOR.md` (DNS name + HTTPS certificate). Start this first — it is the slowest part.
-- You need: Windows admin on the server, SQL `sysadmin`, and a Microsoft Entra admin (for step 3).
+- You need: Windows admin on the server, SQL `sysadmin`, and — only if you want email alerts — a Microsoft Entra admin (step 3). For the ERP login (step 8) you also need an Oracle DBA to create a read-only account.
 
 ## 1. Install the prerequisites (once)
 
-1. **Node.js LTS (22 or newer)** — nodejs.org, "Windows Installer (.msi)", default options (it adds itself to the system PATH). Check: open a *new* PowerShell → `node -v`.
+1. **Node.js 22 or 24 LTS** — nodejs.org, choose the **LTS** download (not "Current"), "Windows Installer (.msi)", default options (it adds itself to the system PATH). Check: open a *new* PowerShell → `node -v`. (The Windows SQL driver ships ready-made files only for LTS versions of Node.)
+   **Microsoft ODBC Driver 18 for SQL Server** — search for it on microsoft.com, download the x64 installer, default options. It is only a connection driver: it does not change SQL Server or the HRMS.
 2. **Git for Windows** — git-scm.com, default options. Check: new PowerShell → `git --version`.
 3. **IIS URL Rewrite** and **Application Request Routing (ARR) 3.0** — download both installers from iis.net.
    After installing: IIS Manager → click the **server name** (top of the tree) → *Application Request Routing Cache* → *Server Proxy Settings* → tick **Enable proxy** → Apply.
@@ -24,34 +25,39 @@ Plan for ~2–3 hours the first time, outside working hours.
 
 ## 2. Database
 
-1. Open `deploy\sql-setup.sql` in SSMS, **change the password**, run it. It creates the `TicketDesk` database and a login that can only use that database.
-2. In SSMS select the `TicketDesk` database, open `deploy\schema.sql`, run it.
-3. Make sure SQL Server accepts this login: SQL Server Configuration Manager → TCP/IP *Enabled*; and Server Properties → Security → **SQL Server and Windows Authentication mode** (restart the SQL service if you change it — ask first, since it briefly interrupts the HRMS. If the HRMS already logs in with a SQL username, this is already on).
+The app signs in to SQL Server as the Windows account it runs under (**SYSTEM**, see `deploy\install-task.ps1`) over a direct local channel (shared memory). There is **no SQL password** and no need to change SQL Server's authentication mode. No restart is needed.
 
-## 3. Microsoft Entra app (sign-in **and** email, one registration)
+1. Open `deploy\sql-setup.sql` in SSMS (connected as a sysadmin) and run it. It creates the `TicketDesk` database and gives SYSTEM access to **that database only**.
+2. In SSMS select the `TicketDesk` database, open `deploy\schema.sql`, run it.
+3. **Already created the database with an older version?** Run `deploy\upgrade-userid-windows.sql` once instead (it adds the new columns and the SYSTEM access; safe to re-run), and afterwards remove the old SQL login: `DROP USER ticketdesk_app; DROP LOGIN ticketdesk_app;`
+4. Check the connection, in an elevated PowerShell in the app folder: `.\deploy\test-db.ps1`. Both lines ("As you" and "As SYSTEM") should start with **OK**. If not, see *If something goes wrong*.
+
+## 3. Email alerts (optional) — Microsoft Entra app
+
+People no longer sign in with Microsoft. The Entra app is used **only to send email** (new ticket, assigned, replies). Skip this section to run without email alerts (leave the `MS_*` lines in `.env.local` empty).
 
 At entra.microsoft.com → *App registrations* → **New registration**:
 
-- Name `TicketDesk`, *Accounts in this organizational directory only*.
-- Redirect URI: platform **Web**, value `https://helpdesk.jmaluminium.com/api/auth/callback/azure-ad` (use the real hostname).
+- Name `TicketDesk`, *Accounts in this organizational directory only*. No redirect URI is needed.
 - Copy **Application (client) ID** and **Directory (tenant) ID**.
-- *Certificates & secrets* → New client secret → copy the **Value** now (shown once). Note the expiry date — set a calendar reminder to renew it, or sign-in and email both stop.
-- *API permissions* → Add → Microsoft Graph →
-  - **Delegated**: `openid`, `profile`, `email`, `User.Read` (usually already there)
-  - **Application**: `Mail.Send`
-  - then **Grant admin consent**.
+- *Certificates & secrets* → New client secret → copy the **Value** now (shown once). Note the expiry date — set a calendar reminder to renew it, or email stops.
+- *API permissions* → Add → Microsoft Graph → **Application** → `Mail.Send` → **Grant admin consent**.
 - Strongly recommended: ask your Microsoft 365 admin to limit `Mail.Send` to the helpdesk mailbox only (Exchange Online "RBAC for Applications" / application access policy). Otherwise this app *could* send mail as anyone in the company.
 - Sending mailbox: e.g. `helpdesk@jmaluminium.com` (a shared mailbox is fine, no licence needed).
+- Emails go to people whose **email address** is known: the ERP's email column (if it has one). People without one simply get no email.
 
-## 4. HTTPS name and certificate
+## 4. The address people use
 
-See `NOTE-FOR-IT-VENDOR.md`. Result you need: `https://helpdesk.jmaluminium.com` opens on office PCs and shows a valid padlock. (The "Capture screen" button only works over HTTPS.)
+Because nobody signs in through Microsoft any more, there are two ways to reach the site:
+
+- **Simple (inside the office network only):** `http://<server IP>:3100`. Set `NEXTAUTH_URL` to exactly that. The app must then listen on the network, not only on the server itself: edit `deploy\start.cmd` and change `-H 127.0.0.1` to `-H 0.0.0.0`, and allow TCP 3100 in Windows Firewall for the **private/domain** profile only. **Caution:** passwords then travel unencrypted across the office network. Acceptable for a trial; use HTTPS before everyone starts using it.
+- **Recommended: HTTPS name through IIS.** See `NOTE-FOR-IT-VENDOR.md` (an internal DNS name and a certificate, nothing public). Result: `https://helpdesk.<your domain>` opens on office PCs with a valid padlock, and `NEXTAUTH_URL` is that address. (The "Capture screen" button only works over HTTPS.)
 
 ## 5. Install the app
 
 1. Put the app on the server, e.g. `D:\apps\ticketdesk`. The easiest way is `git clone` (see **Updating later (Git)** below); copying this folder also works.
 2. Create the screenshot folder, e.g. `D:\TicketDeskFiles`.
-3. In the app folder: copy `.env.example` → `.env.local` and fill it in (every line is explained in the file). Put your own email in `INITIAL_ADMIN_EMAILS`.
+3. In the app folder: copy `.env.example` → `.env.local` and fill it in (every line is explained in the file). Put your own ERP user ID in `INITIAL_ADMIN_IDS`.
 4. In an elevated PowerShell in the app folder:
    ```powershell
    npm ci
@@ -68,15 +74,39 @@ See `NOTE-FOR-IT-VENDOR.md`. Result you need: `https://helpdesk.jmaluminium.com`
 
 ## 7. First sign-in
 
-Open `https://helpdesk.jmaluminium.com` → *Sign in with Microsoft*. You become admin automatically (from `INITIAL_ADMIN_EMAILS`). Then open **Users** and set each person's role after they have signed in once:
-  - **IT team** for Danish and Prashant. They get their own login (same Microsoft sign-in). They see only tickets assigned to them plus the unassigned pool (they can assign those to themselves), and their KPIs. They cannot see other people's tickets or the Users page.
+You need one account that can sign in before the ERP copy has run (step 8). Create it on the server, in an elevated PowerShell in the app folder:
+
+```powershell
+npm run set-password -- yourid --name "Your Name" --role admin
+```
+
+It asks for a password (nothing shows while you type). Then open the site and sign in with that user ID and password. Also put the same ID in `INITIAL_ADMIN_IDS` so it stays admin when it is later replaced by the ERP copy. (After step 8 you can use your ERP user ID and ERP password instead; users that come from the ERP use the ERP password.)
+
+Open **Users** and set each person's role:
+  - **IT team** for Danish and Prashant. They sign in with their own ERP user ID. They see only tickets assigned to them plus the unassigned pool (they can assign those to themselves), and their KPIs. They cannot see other people's tickets or the Users page.
   - **Admin** for anyone who should see and assign everything.
   - Type a **phone number** against each IT-team member. When a ticket is assigned, the person who raised it sees that name and number on the ticket.
+
+The same `set-password` command also creates or resets accounts for people who are **not** in the ERP.
 
 **Test checklist**
 - Raise an IT ticket with a pasted screenshot and one from *Capture screen*.
 - Raise an ERP ticket. As admin: assign, change status, add an internal note, reply. Check the Outlook emails arrive (look in Junk the first time).
 - Sign in as an ordinary user: confirm they only see their own tickets and no internal notes.
+
+## 8. ERP users and passwords (nightly, 12 AM)
+
+Every night at 12 AM a scheduled task copies the user list from the ERP's Oracle database into TicketDesk, so people sign in with their ERP user ID and ERP password. A password changed in the ERP works in TicketDesk after the next run. An account that is disabled or removed in the ERP is disabled in TicketDesk. The sync **never** changes TicketDesk roles or phone numbers.
+
+1. Ask your Oracle DBA for a **read-only** Oracle account that can `SELECT` from the ERP's user table only, and for the connect string (`host:port/service_name`). Oracle 12.1 or newer is supported without installing any Oracle client.
+2. Copy `deploy\erp-sync.sample.sql` to `deploy\erp-sync.sql` and edit the table and column names to match the ERP's user table. (This file stays on the server and is not in Git.)
+3. Fill in the `ERP_*` lines in `.env.local`. **How the ERP stores passwords decides `ERP_SECRET_MODE`:**
+   - readable (plain text) or reversibly encrypted → `plain`. TicketDesk keeps only its own salted hash, never the readable password.
+   - a hash, in hex text, made with md5 / sha1 / sha256 / sha512 → `hash`, and set `ERP_PW_SCHEME`. Other hash types are not supported yet.
+4. Try it without changing anything: `npm run erp-sync -- --dry`. It prints how many users would be added, updated or disabled.
+5. Run it for real once: `npm run erp-sync`. Then register the nightly task: `.\deploy\install-sync-task.ps1`. Results are written to `logs\erp-sync.log`.
+
+Safety: if the ERP query returns no users, or would disable more than a fifth of the accounts, the sync stops and changes nothing. If a TicketDesk account created with `set-password` has the same user ID as an ERP user, it is left alone and the log says so.
 
 ## Backups
 
@@ -119,11 +149,13 @@ Do not edit files on the server by hand; the script refuses to update if you did
 | Symptom | Likely cause |
 |---|---|
 | Page shows 502 / 404 from IIS | App not running — check `logs\app.log`; ARR proxy not enabled; port in `web.config` ≠ `start.cmd` |
-| Microsoft says "redirect URI mismatch" (AADSTS50011) | The Redirect URI in Entra differs from `NEXTAUTH_URL` + `/api/auth/callback/azure-ad` |
-| "This account can't use TicketDesk" | Email not in `ALLOWED_DOMAINS`, or the user was disabled under *Users* |
-| A real colleague is denied although they use the right account | Their Microsoft 365 mailbox address is not on `jmaluminium.com`/`.in` (check *Users* in the Microsoft 365 admin center) |
-| Sign-in loops back to login | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` missing or wrong; site opened by a different hostname than `NEXTAUTH_URL` |
-| Tickets don't load / "Server error" | Wrong SQL settings in `.env.local`, SQL login not allowed, TCP/IP off — see `logs\app.log` |
-| No emails | `MS_SENDER` mailbox wrong, `Mail.Send` not consented, or client secret expired — see `logs\app.log` ("Email error") |
+| "Wrong user ID or password" for a good ERP user | The nightly copy has not run yet (run `npm run erp-sync`), the account is disabled in the ERP, or `ERP_SECRET_MODE` / `ERP_PW_SCHEME` does not match how the ERP stores passwords |
+| "This account is locked for 15 minutes" | Five wrong passwords in a row. Wait, or an admin runs `npm run set-password` for a local account |
+| `test-db.ps1` says FAIL as SYSTEM but OK as you | SYSTEM has no access to the TicketDesk database — run `deploy\sql-setup.sql` (or the upgrade script) again |
+| `test-db.ps1`: data source name not found | The ODBC Driver 18 is not installed (or use `-Driver "ODBC Driver 17 for SQL Server"` if that is what you installed) |
+| App log: "Windows authentication needs the 'msnodesqlv8' package" | `npm ci` could not fetch the ready-made driver files: use Node 22 or 24 **LTS**, run `npm ci` again and check `npm ls msnodesqlv8` |
+| Sign-in does nothing / loops back to login | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` missing or wrong; site opened by a different address than `NEXTAUTH_URL` (use exactly the same one) |
+| Tickets don't load / "Server error" | Database not reachable as SYSTEM, or wrong settings in `.env.local` — run `.\deploy\test-db.ps1`, then see `logs\app.log` |
+| No emails | `MS_*` lines empty (email is off), the person has no email address in the ERP, `Mail.Send` not consented, or client secret expired — see `logs\app.log` ("Email error") |
 | Can't upload screenshots | `UPLOAD_DIR` folder missing, or SYSTEM account lacks write access to it |
 | "Capture screen" button missing | Page is not on HTTPS |

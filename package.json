@@ -5,14 +5,17 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "set-password": "node --env-file=.env.local scripts/set-password.js",
+    "erp-sync": "node --env-file=.env.local scripts/erp-sync.js"
   },
   "dependencies": {
     "mssql": "^11.0.1",
     "next": "^16.4.4",
     "next-auth": "^4.24.15",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "oracledb": "^6.10.0"
   },
   "devDependencies": {
     "@types/mssql": "^9.1.5",
@@ -23,5 +26,8 @@
     "postcss": "^8.5.32",
     "tailwindcss": "^3.4.6",
     "typescript": "^5.5.3"
+  },
+  "optionalDependencies": {
+    "msnodesqlv8": "^6.2.2"
   }
 }
