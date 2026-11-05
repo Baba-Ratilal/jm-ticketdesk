@@ -28,6 +28,6 @@
     "typescript": "^5.5.3"
   },
   "optionalDependencies": {
-    "msnodesqlv8": "^6.2.2"
+    "msnodesqlv8": "^5.6.0"
   }
 }

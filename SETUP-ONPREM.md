@@ -16,7 +16,7 @@ Plan for ~2–3 hours the first time, outside working hours.
 
 ## 1. Install the prerequisites (once)
 
-1. **Node.js 22 or 24 LTS** — nodejs.org, choose the **LTS** download (not "Current"), "Windows Installer (.msi)", default options (it adds itself to the system PATH). Check: open a *new* PowerShell → `node -v`. (The Windows SQL driver ships ready-made files only for LTS versions of Node.)
+1. **Node.js 22 or 24 LTS** — nodejs.org, choose the **LTS** download (not "Current"), "Windows Installer (.msi)", default options (it adds itself to the system PATH). Check: open a *new* PowerShell → `node -v`.
    **Microsoft ODBC Driver 18 for SQL Server** — search for it on microsoft.com, download the x64 installer, default options. It is only a connection driver: it does not change SQL Server or the HRMS.
 2. **Git for Windows** — git-scm.com, default options. Check: new PowerShell → `git --version`.
 3. **IIS URL Rewrite** and **Application Request Routing (ARR) 3.0** — download both installers from iis.net.
@@ -153,7 +153,7 @@ Do not edit files on the server by hand; the script refuses to update if you did
 | "This account is locked for 15 minutes" | Five wrong passwords in a row. Wait, or an admin runs `npm run set-password` for a local account |
 | `test-db.ps1` says FAIL as SYSTEM but OK as you | SYSTEM has no access to the TicketDesk database — run `deploy\sql-setup.sql` (or the upgrade script) again |
 | `test-db.ps1`: data source name not found | The ODBC Driver 18 is not installed (or use `-Driver "ODBC Driver 17 for SQL Server"` if that is what you installed) |
-| App log: "Windows authentication needs the 'msnodesqlv8' package" | `npm ci` could not fetch the ready-made driver files: use Node 22 or 24 **LTS**, run `npm ci` again and check `npm ls msnodesqlv8` |
+| App log: "Windows authentication needs the 'msnodesqlv8' package" | `npm ci` could not install the optional Windows driver: run `npm ci` again, check `npm ls msnodesqlv8`, and send the output if it stays empty |
 | Sign-in does nothing / loops back to login | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` missing or wrong; site opened by a different address than `NEXTAUTH_URL` (use exactly the same one) |
 | Tickets don't load / "Server error" | Database not reachable as SYSTEM, or wrong settings in `.env.local` — run `.\deploy\test-db.ps1`, then see `logs\app.log` |
 | No emails | `MS_*` lines empty (email is off), the person has no email address in the ERP, `Mail.Send` not consented, or client secret expired — see `logs\app.log` ("Email error") |
