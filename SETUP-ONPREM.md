@@ -159,3 +159,13 @@ Do not edit files on the server by hand; the script refuses to update if you did
 | No emails | `MS_*` lines empty (email is off), the person has no email address in the ERP, `Mail.Send` not consented, or client secret expired — see `logs\app.log` ("Email error") |
 | Can't upload screenshots | `UPLOAD_DIR` folder missing, or SYSTEM account lacks write access to it |
 | "Capture screen" button missing | Page is not on HTTPS |
+
+## Adding users, passwords and Issues
+
+**Adding a user (admin).** Users page → **+ Add user**. Enter the user ID, name and role; leave the password empty to have one generated, or type a default. The temporary password is shown **once** — give it to the person. At their first sign-in they are taken straight to a "choose your own password" page and cannot use anything else until they do. **Reset password** on the same page does the same for someone who forgot theirs (not available for accounts that sign in with their ERP password — those are reset in the ERP). Everyone can change their own password later with the key icon in the sidebar.
+
+**Issues (IT team and admins only).** An issue is an internal tracking item — an ERP bug, a server problem, a project — with its own owner, priority and status, notes and timeline. One issue can have several tickets linked to it (by ticket number, or "Create issue from this ticket" on any ticket). Regular users never see issues.
+
+**Boards.** Both **Issues** and the ticket queue (**All tickets / Support queue**) have a **Board / List** switch. On the board, drag a card to another column to change its status (on a phone use the "Move to…" menu on the card). IT-team members can only move tickets that are unassigned or assigned to them.
+
+**Updating the server.** This version adds database tables: run `deploy\upgrade-issues-passwords.sql` once in SSMS **before** starting the new version (safe to re-run; no restart needed).

@@ -22,7 +22,8 @@ type Comment = {
 type Attachment = { id: string; comment_id: string | null; file_name: string };
 type EventRow = { id: string; actor_name: string | null; action: string; detail: string | null; created_at: string };
 type Admin = { id: string; email: string; full_name: string | null; phone?: string | null };
-type Detail = { ticket: Ticket; comments: Comment[]; attachments: Attachment[]; events: EventRow[]; admins: Admin[] };
+type LinkedIssue = { id: string; issue_no: number; title: string; status: string };
+type Detail = { ticket: Ticket; comments: Comment[]; attachments: Attachment[]; events: EventRow[]; admins: Admin[]; issues?: LinkedIssue[] };
 
 const fileUrl = (a: Attachment) => `/api/files/${a.id}`;
 
@@ -123,6 +124,7 @@ function TicketView() {
     );
 
   const { ticket, comments, attachments, events, admins } = data;
+  const issues = data.issues ?? [];
   const ticketShots = attachments.filter((a) => !a.comment_id);
 
   return (
@@ -286,6 +288,22 @@ function TicketView() {
                   ))}
                 </select>
               </div>
+            </div>
+          )}
+
+          {isStaff && (
+            <div className="card pad">
+              <div className="sec-h">Issues</div>
+              {issues.length === 0 && <p className="sub" style={{ marginBottom: 10 }}>Not part of any issue yet.</p>}
+              {issues.map((i) => (
+                <div key={i.id} className="row">
+                  <Link href={`/issues/${i.id}`} style={{ color: "var(--accent)" }}>#{i.issue_no} · {i.title}</Link>
+                  <StatusBadge status={i.status} />
+                </div>
+              ))}
+              <Link href={`/issues/new?ticket=${ticket.id}`} className="btn sm" style={{ marginTop: 10 }}>
+                Create issue from this ticket
+              </Link>
             </div>
           )}
 

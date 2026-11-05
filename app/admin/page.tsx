@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
+import Kanban from "@/components/Kanban";
 import { api } from "@/lib/api";
 import { fmtDate, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
@@ -24,6 +25,7 @@ function Dashboard() {
   const [fPriority, setFPriority] = useState("");
   const [fAssignee, setFAssignee] = useState("");
   const [quick, setQuick] = useState<Quick>("");
+  const [view, setView] = useState<"board" | "list">("list");
 
   async function load() {
     try {
@@ -35,11 +37,22 @@ function Dashboard() {
     }
   }
   useEffect(() => {
+    try {
+      const v = localStorage.getItem("ticketsView");
+      if (v === "list" || v === "board") setView(v);
+    } catch {}
     load();
     const timer = setInterval(load, 60000); // auto-refresh every minute
     return () => clearInterval(timer);
   }, []);
 
+  const pickView = (v: "board" | "list") => {
+    setView(v);
+    try {
+      localStorage.setItem("ticketsView", v);
+    } catch {}
+  };
+  const DONE_DAYS = 30;
   const isActive = (t: Ticket) => !["Resolved", "Closed"].includes(t.status);
   const stats = useMemo(() => {
     const active = tickets.filter(isActive);
@@ -66,7 +79,10 @@ function Dashboard() {
     if (quick === "progress" && t.status !== "In Progress") return false;
     if (quick === "unassigned" && (t.assigned_to || !isActive(t))) return false;
     if (quick === "urgent" && !(isActive(t) && (t.priority === "Critical" || t.priority === "High"))) return false;
-    if (!quick) {
+    if (view === "board") {
+      // the board has a column per status; keep Resolved / Closed short
+      if (!isActive(t) && new Date(t.updated_at).getTime() < Date.now() - DONE_DAYS * 86400000) return false;
+    } else if (!quick) {
       if (fStatus === "active" && !isActive(t)) return false;
       if (fStatus && fStatus !== "active" && fStatus !== "all" && t.status !== fStatus) return false;
     }
@@ -91,6 +107,11 @@ function Dashboard() {
     }
   }
 
+  async function moveTicket(t: Ticket, status: string) {
+    await api(`/api/tickets/${t.id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+    await load();
+  }
+
   const Kpi = ({ id, label, value, note }: { id: Quick; label: string; value: number; note: string }) => (
     <button className={`kpi ${quick === id ? "on" : ""}`} onClick={() => setQuick(quick === id ? "" : id)}>
       <span className="kl">{label}</span>
@@ -109,6 +130,10 @@ function Dashboard() {
               ? "Assign, prioritise and resolve IT & ERP requests."
               : "Your assigned tickets and the unassigned ones you can pick up."}
           </p>
+        </div>
+        <div className="segs" role="group" aria-label="View">
+          <button className={`seg ${view === "board" ? "on" : ""}`} onClick={() => pickView("board")}>Board</button>
+          <button className={`seg ${view === "list" ? "on" : ""}`} onClick={() => pickView("list")}>List</button>
         </div>
       </div>
 
@@ -139,13 +164,15 @@ function Dashboard() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <select className="in sel" aria-label="Status" value={fStatus} onChange={(e) => { setQuick(""); setFStatus(e.target.value); }}>
-          <option value="active">Active (not closed)</option>
-          <option value="all">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
+        {view === "list" && (
+          <select className="in sel" aria-label="Status" value={fStatus} onChange={(e) => { setQuick(""); setFStatus(e.target.value); }}>
+            <option value="active">Active (not closed)</option>
+            <option value="all">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        )}
         <select className="in sel" aria-label="Type" value={fType} onChange={(e) => setFType(e.target.value)}>
           <option value="">IT + ERP</option>
           <option>IT</option>
@@ -172,6 +199,27 @@ function Dashboard() {
 
       {loading ? (
         <p className="sub">Loading…</p>
+      ) : view === "board" ? (
+        <>
+          <Kanban
+            items={shown}
+            onMove={moveTicket}
+            renderCard={(t) => (
+              <>
+                <Link href={`/tickets/${t.id}`} className="kt">#{t.ticket_no} · {t.title}</Link>
+                <div className="km">
+                  <TypeBadge type={t.type} />
+                  <PriorityBadge priority={t.priority} label={false} />
+                  <span>{t.creator_name || t.creator_email}</span>
+                </div>
+                <div className="km">{t.assigned_to ? (t.assigned_to === me.id ? "Me" : t.assignee_name) : "Unassigned"}</div>
+              </>
+            )}
+          />
+          <p className="fine" style={{ marginTop: 6 }}>
+            Drag a card to another column to change its status. {isAdmin ? "" : "You can only move tickets that are unassigned or assigned to you. "}Resolved and Closed columns show the last {DONE_DAYS} days.
+          </p>
+        </>
       ) : shown.length === 0 ? (
         <div className="card empty">
           <b>No tickets match</b>

@@ -11,6 +11,8 @@ const P: Record<string, string> = {
   camera: "M4 8h3l1.5-2h7L17 8h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z",
   upload: "M12 16V4M7 9l5-5 5 5M4 20h16",
   back: "M15 5l-7 7 7 7",
+  issues: "M12 3l9.5 16.5h-19zM12 10v4.5M12 17.5h.01",
+  key: "M14.5 9.5a4 4 0 1 1-3.2 1.6L4 18v2h2.5v-2H9v-2.5h2.2",
 };
 
 export default function Icon({ name, size = 18 }: { name: keyof typeof P | string; size?: number }) {

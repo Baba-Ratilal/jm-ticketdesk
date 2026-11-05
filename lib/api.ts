@@ -14,6 +14,10 @@ export async function api<T = any>(url: string, init?: RequestInit): Promise<T> 
     throw new Error("Please sign in again");
   }
   const data = await res.json().catch(() => ({}));
+  if (res.status === 403 && (data as any).error === "PASSWORD_CHANGE_REQUIRED" && typeof window !== "undefined") {
+    if (!window.location.pathname.startsWith("/change-password")) window.location.href = "/change-password";
+    throw new Error("Please set a new password first");
+  }
   if (!res.ok) throw new Error((data as any).error || `Request failed (${res.status})`);
   return data as T;
 }

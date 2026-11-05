@@ -28,6 +28,7 @@ export default function AppShell({
   useEffect(() => {
     api<Profile>("/api/me")
       .then((p) => {
+        if (p.must_change_password) return router.replace("/change-password");
         if (adminOnly && p.role !== "admin") return router.replace("/");
         if (staffOnly && p.role === "user") return router.replace("/");
         setProfile(p);
@@ -47,6 +48,7 @@ export default function AppShell({
     { href: "/", label: "My tickets", icon: "tickets" },
     { href: "/tickets/new", label: "New ticket", icon: "plus" },
     ...(isStaff ? [{ href: "/admin", label: isAdmin ? "All tickets" : "Support queue", icon: "inbox" }] : []),
+    ...(isStaff ? [{ href: "/issues", label: "Issues", icon: "issues" }] : []),
     ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
   ];
   const isOn = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
@@ -87,6 +89,9 @@ export default function AppShell({
             </div>
             <div className="row2">
               <ThemeToggle />
+              <Link href="/change-password" className="ni" title="Change password">
+                <Icon name="key" size={16} />
+              </Link>
               <button className="ni" onClick={() => signOut({ callbackUrl: "/login" })}>
                 <Icon name="logout" size={16} />
                 Logout

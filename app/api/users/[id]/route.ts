@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { isGuid, query } from "@/lib/db";
 import { handle, HttpError } from "@/lib/http";
+import { hashPassword } from "@/lib/password";
+import { generatePassword, passwordProblem } from "@/lib/policy";
 import { requireAdmin } from "@/lib/server";
 
 export const runtime = "nodejs";
@@ -14,10 +16,27 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!isGuid(params.id)) throw new HttpError(404, "User not found");
     const body = await req.json().catch(() => ({}));
 
-    const [u] = await query<{ role: string; active: boolean; phone: string | null }>("SELECT role, active, phone FROM dbo.users WHERE id=@id", {
-      id: params.id,
-    });
+    const [u] = await query<{ role: string; active: boolean; phone: string | null; source: string; login_id: string | null }>(
+      "SELECT role, active, phone, source, login_id FROM dbo.users WHERE id=@id",
+      { id: params.id }
+    );
     if (!u) throw new HttpError(404, "User not found");
+
+    // reset the password: a temporary one that must be changed at the next sign-in (shown once)
+    if (body.reset_password) {
+      if (u.source === "erp") throw new HttpError(400, "This account uses its ERP password. Reset it in the ERP.");
+      const given = String(body.password ?? "");
+      const password = given || generatePassword();
+      if (given) {
+        const problem = passwordProblem(given, u.login_id);
+        if (problem) throw new HttpError(400, problem);
+      }
+      await query(
+        "UPDATE dbo.users SET password_hash=@h, must_change_password=1, failed_attempts=0, locked_until=NULL WHERE id=@id",
+        { h: await hashPassword(password), id: params.id }
+      );
+      return { ok: true, password };
+    }
 
     const newRole = body.role ?? u.role;
     const newActive = body.active ?? u.active;

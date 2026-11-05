@@ -41,7 +41,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           "SELECT id, email, full_name, phone FROM dbo.users WHERE role IN ('admin','agent') AND active=1 ORDER BY full_name"
         )
       : [];
-    return { ticket, comments, attachments, events, admins };
+    const issues = isAdmin
+      ? await query(
+          `SELECT i.id, i.issue_no, i.title, i.status
+             FROM dbo.issue_tickets it JOIN dbo.issues i ON i.id = it.issue_id
+            WHERE it.ticket_id = @t ORDER BY i.issue_no`,
+          { t: ticket.id }
+        )
+      : [];
+    return { ticket, comments, attachments, events, admins, issues };
   });
 }
 

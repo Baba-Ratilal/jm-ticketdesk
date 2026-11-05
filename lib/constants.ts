@@ -77,6 +77,27 @@ export type Profile = {
   department: string | null;
   active?: boolean;
   last_login?: string | null;
+  source?: "local" | "erp";
+  must_change_password?: boolean;
+};
+
+export type Issue = {
+  id: string;
+  issue_no: number;
+  type: "IT" | "ERP";
+  title: string;
+  description: string;
+  priority: (typeof PRIORITIES)[number];
+  status: (typeof STATUSES)[number];
+  erp_module: string | null;
+  created_by: string;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  creator_name?: string | null;
+  assignee_name?: string | null;
+  ticket_count?: number;
 };
 
 export const statusPill: Record<string, string> = {
