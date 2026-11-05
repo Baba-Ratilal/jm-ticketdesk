@@ -6,17 +6,27 @@
 
 CREATE TABLE dbo.users (
   id          UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_users_id DEFAULT NEWID() CONSTRAINT PK_users PRIMARY KEY,
-  email       NVARCHAR(256)    NOT NULL CONSTRAINT UQ_users_email UNIQUE,   -- always lower case
+  login_id    NVARCHAR(100)    NULL,        -- the ERP user ID people sign in with; always lower case
+  email       NVARCHAR(256)    NULL,        -- optional; only used for email alerts; always lower case
   full_name   NVARCHAR(200)    NULL,
   role        NVARCHAR(10)     NOT NULL CONSTRAINT DF_users_role DEFAULT 'user'
               CONSTRAINT CK_users_role CHECK (role IN ('user','agent','admin')),   -- agent = IT team member
-  phone       NVARCHAR(20)     NULL,   -- shown to the requester when a ticket is assigned
+  phone       NVARCHAR(20)     NULL,        -- shown to the requester when a ticket is assigned
   unit        NVARCHAR(100)    NULL,
   department  NVARCHAR(100)    NULL,
   active      BIT              NOT NULL CONSTRAINT DF_users_active DEFAULT 1,
+  source      NVARCHAR(10)     NOT NULL CONSTRAINT DF_users_source DEFAULT 'local'
+              CONSTRAINT CK_users_source CHECK (source IN ('local','erp')),        -- erp = kept in step by the nightly sync
+  password_hash   NVARCHAR(300) NULL,       -- TicketDesk's own salted hash (never the password itself)
+  erp_secret      NVARCHAR(500) NULL,       -- the ERP's own stored hash, when it only gives us a hash
+  erp_synced_at   DATETIME2     NULL,
+  failed_attempts INT           NOT NULL CONSTRAINT DF_users_failed DEFAULT 0,
+  locked_until    DATETIME2     NULL,
   created_at  DATETIME2        NOT NULL CONSTRAINT DF_users_created DEFAULT SYSUTCDATETIME(),
   last_login  DATETIME2        NULL
 );
+CREATE UNIQUE INDEX UX_users_login_id ON dbo.users(login_id) WHERE login_id IS NOT NULL;
+CREATE UNIQUE INDEX UX_users_email    ON dbo.users(email)    WHERE email    IS NOT NULL;
 GO
 
 CREATE TABLE dbo.tickets (

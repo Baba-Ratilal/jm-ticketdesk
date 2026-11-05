@@ -50,7 +50,7 @@ export default function AppShell({
     ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
   ];
   const isOn = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
-  const initials = (profile.full_name || profile.email)
+  const initials = (profile.full_name || profile.login_id || profile.email || "?")
     .split(/\s+/)
     .map((w) => w[0])
     .slice(0, 2)
@@ -80,9 +80,9 @@ export default function AppShell({
 
           <div className="sf">
             <div className="who">
-              <b>{profile.full_name || profile.email}</b>
+              <b>{profile.full_name || profile.login_id || profile.email}</b>
               <span>
-                {isAdmin ? "Admin" : isStaff ? "IT team" : "User"} · {profile.email}
+                {isAdmin ? "Admin" : isStaff ? "IT team" : "User"} · {profile.login_id || profile.email}
               </span>
             </div>
             <div className="row2">
@@ -102,7 +102,7 @@ export default function AppShell({
               <span>JM TicketDesk</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span className="av" title={profile.email}>
+              <span className="av" title={profile.login_id || profile.email || ""}>
                 {initials}
               </span>
               <ThemeToggle className="icon-top" />

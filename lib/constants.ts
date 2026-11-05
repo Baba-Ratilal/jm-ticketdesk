@@ -68,7 +68,8 @@ export type Ticket = {
 
 export type Profile = {
   id: string;
-  email: string;
+  login_id: string | null;
+  email: string | null;
   full_name: string | null;
   role: "user" | "agent" | "admin";
   phone?: string | null;

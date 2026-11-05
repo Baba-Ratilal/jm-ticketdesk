@@ -6,7 +6,8 @@ import { HttpError } from "./http";
 
 export type DbUser = {
   id: string;
-  email: string;
+  login_id: string | null;
+  email: string | null;
   full_name: string | null;
   role: "user" | "agent" | "admin";
   phone: string | null;
@@ -29,7 +30,7 @@ export async function requireUser(req?: NextRequest): Promise<DbUser> {
   const uid = (session as any)?.uid;
   if (!isGuid(uid)) throw new HttpError(401, "Not signed in");
   const rows = await query<DbUser>(
-    "SELECT id, email, full_name, role, phone, unit, department, active FROM dbo.users WHERE id=@id",
+    "SELECT id, login_id, email, full_name, role, phone, unit, department, active FROM dbo.users WHERE id=@id",
     { id: uid }
   );
   const u = rows[0];
