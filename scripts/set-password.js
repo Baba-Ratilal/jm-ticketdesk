@@ -38,6 +38,10 @@ function ask(prompt, hidden) {
     console.log('Usage: node --env-file=.env.local scripts/set-password.js <user-id> [--name "Full Name"] [--role admin|agent|user]');
     process.exit(1);
   }
+  if (!/^[a-z0-9._@-]{1,100}$/.test(loginId) || loginId.includes("--")) {
+    console.log(`"${loginId}" is not a usable user ID (letters, digits and . _ @ - only, and no "--"). Nothing changed.`);
+    process.exit(1);
+  }
 
   const [existing] = await query("SELECT id, source FROM dbo.users WHERE login_id=@l", { l: loginId });
   if (existing && existing.source === "erp") {

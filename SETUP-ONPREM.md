@@ -77,7 +77,7 @@ Because nobody signs in through Microsoft any more, there are two ways to reach 
 You need one account that can sign in before the ERP copy has run (step 8). Create it on the server, in an elevated PowerShell in the app folder:
 
 ```powershell
-npm run set-password -- yourid --name "Your Name" --role admin
+node --env-file=.env.local scripts\set-password.js yourid --name "Your Name" --role admin
 ```
 
 It asks for a password (nothing shows while you type). Then open the site and sign in with that user ID and password. Also put the same ID in `INITIAL_ADMIN_IDS` so it stays admin when it is later replaced by the ERP copy. (After step 8 you can use your ERP user ID and ERP password instead; users that come from the ERP use the ERP password.)
@@ -87,7 +87,7 @@ Open **Users** and set each person's role:
   - **Admin** for anyone who should see and assign everything.
   - Type a **phone number** against each IT-team member. When a ticket is assigned, the person who raised it sees that name and number on the ticket.
 
-The same `set-password` command also creates or resets accounts for people who are **not** in the ERP.
+The same command (`scripts\set-password.js`) also creates or resets accounts for people who are **not** in the ERP.
 
 **Test checklist**
 - Raise an IT ticket with a pasted screenshot and one from *Capture screen*.
@@ -150,7 +150,7 @@ Do not edit files on the server by hand; the script refuses to update if you did
 |---|---|
 | Page shows 502 / 404 from IIS | App not running — check `logs\app.log`; ARR proxy not enabled; port in `web.config` ≠ `start.cmd` |
 | "Wrong user ID or password" for a good ERP user | The nightly copy has not run yet (run `npm run erp-sync`), the account is disabled in the ERP, or `ERP_SECRET_MODE` / `ERP_PW_SCHEME` does not match how the ERP stores passwords |
-| "This account is locked for 15 minutes" | Five wrong passwords in a row. Wait, or an admin runs `npm run set-password` for a local account |
+| "This account is locked for 15 minutes" | Five wrong passwords in a row. Wait, or an admin runs `scripts\set-password.js` for a local account |
 | `test-db.ps1` says FAIL as SYSTEM but OK as you | SYSTEM has no access to the TicketDesk database — run `deploy\sql-setup.sql` (or the upgrade script) again |
 | `test-db.ps1`: data source name not found | The ODBC Driver 18 is not installed (or use `-Driver "ODBC Driver 17 for SQL Server"` if that is what you installed) |
 | App log: "Windows authentication needs the 'msnodesqlv8' package" | `npm ci` could not install the optional Windows driver: run `npm ci` again, check `npm ls msnodesqlv8`, and send the output if it stays empty |
