@@ -12,8 +12,13 @@ if (-not (Test-Path "$appDir\.git")) {
     Write-Host "This folder is not a Git checkout. See 'Updating later' in SETUP-ONPREM.md (clone the repository first)." -ForegroundColor Red
     exit 1
 }
-if (git status --porcelain --untracked-files=no) {
-    Write-Host "Files in this folder were edited by hand. Undo or commit them first (git status shows which)." -ForegroundColor Red
+$changed = git status --porcelain --untracked-files=no
+if ($changed) {
+    Write-Host "These files in this folder were changed (by hand, or by a build):" -ForegroundColor Red
+    $changed | ForEach-Object { Write-Host "   $_" }
+    Write-Host ""
+    Write-Host "If you did not edit them yourself, discard the changes and run this again:   git checkout -- ." -ForegroundColor Yellow
+    Write-Host "If you did, keep a copy first:   git stash" -ForegroundColor Yellow
     exit 1
 }
 
