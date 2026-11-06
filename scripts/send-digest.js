@@ -65,13 +65,19 @@ function row(i) {
     <td style="padding:7px 10px;border-top:1px solid #e5eaec;white-space:nowrap;color:#46575d">${days(i.created_at)}d</td></tr>`;
 }
 
-function html(person, mine, unassigned, team, label) {
+const CAP = 25;
+function listTable(items) {
+  const shown = items.slice(0, CAP);
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5eaec;border-radius:8px;border-collapse:separate;font-size:14px">
+    <tr style="background:#f4f7f8;color:#72848a;font-size:12px;text-align:left"><th style="padding:7px 10px">Item</th><th style="padding:7px 10px">Priority</th><th style="padding:7px 10px">Waiting</th></tr>
+    ${shown.map(row).join("")}</table>${items.length > shown.length ? `<p style="color:#72848a;font-size:12px;margin:6px 0 0">+ ${items.length - shown.length} more — open the app to see all.</p>` : ""}`;
+}
+const h3 = (t) => `<h3 style="margin:24px 0 8px;font-size:14px">${t}</h3>`;
+
+function html(person, mine, pool, others, team, label) {
+  const unassigned = pool.length;
   const urgent = mine.filter((i) => (LEVEL[i.priority] || 0) >= 3).length;
-  const table = mine.length
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5eaec;border-radius:8px;border-collapse:separate;font-size:14px">
-         <tr style="background:#f4f7f8;color:#72848a;font-size:12px;text-align:left"><th style="padding:7px 10px">Item</th><th style="padding:7px 10px">Priority</th><th style="padding:7px 10px">Waiting</th></tr>
-         ${mine.map(row).join("")}</table>`
-    : `<p style="color:#46575d">Nothing is assigned to you right now.</p>`;
+  const table = mine.length ? listTable(mine) : `<p style="color:#46575d">Nothing is assigned to you right now.</p>`;
   const teamBlock = team
     ? `<h3 style="margin:22px 0 8px;font-size:14px">Team</h3>
        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5eaec;font-size:13px;border-collapse:collapse">
@@ -87,6 +93,8 @@ function html(person, mine, unassigned, team, label) {
      <p style="margin:0 0 16px;color:#46575d;font-size:14px">${mine.length} item${mine.length === 1 ? "" : "s"} assigned to you${urgent ? `, <b style="color:#c0372f">${urgent} high or critical</b>` : ""}.
        ${unassigned ? ` ${unassigned} ticket${unassigned === 1 ? " is" : "s are"} still unassigned in the queue.` : ""}</p>
      ${table}
+     ${pool.length ? h3(`Unassigned tickets (${pool.length}) — pick one up`) + listTable(pool) : ""}
+     ${others && others.length ? h3("Everyone else's open items") + others.map((o) => `<p style="margin:12px 0 6px;font-size:13px;color:#46575d"><b>${esc(o.name)}</b> · ${o.items.length}</p>` + listTable(o.items)).join("") : ""}
      ${teamBlock}
      <p style="margin:20px 0 0"><a href="${base}/work" style="display:inline-block;background:#0b6e75;color:#fff;text-decoration:none;font-weight:600;padding:9px 16px;border-radius:9px">Open My work</a></p>
    </td></tr>
@@ -108,7 +116,8 @@ async function main() {
     "SELECT id, issue_no AS no, type, title, priority, status, created_at, assigned_to FROM dbo.issues WHERE status NOT IN ('Resolved','Closed')"
   );
   const all = [...tickets.map((t) => ({ ...t, kind: "Ticket" })), ...issues.map((i) => ({ ...i, kind: "Issue" }))];
-  const unassigned = tickets.filter((t) => !t.assigned_to).length;
+  const pool = tickets.filter((t) => !t.assigned_to).map((t) => ({ ...t, kind: "Ticket" })).sort(byUrgency);
+  const unassigned = pool.length;
 
   const team = people
     .map((p) => {
@@ -132,7 +141,14 @@ async function main() {
     const mine = all.filter((i) => i.assigned_to === p.id).sort(byUrgency);
     if (!mine.length && !unassigned && p.role !== "admin" && !FORCE) { skipped++; continue; }
     const subject = `${label} to-do: ${mine.length} item${mine.length === 1 ? "" : "s"}${unassigned ? `, ${unassigned} unassigned` : ""}`;
-    const body = html(p, mine, unassigned, p.role === "admin" ? team : null, label);
+    const isAdmin = p.role === "admin";
+    const others = isAdmin
+      ? people
+          .filter((x) => x.id !== p.id)
+          .map((x) => ({ name: x.full_name || x.login_id, items: all.filter((i) => i.assigned_to === x.id).sort(byUrgency) }))
+          .filter((o) => o.items.length)
+      : null;
+    const body = html(p, mine, pool, others, isAdmin ? team : null, label);
     if (DRY) { log(`[dry] would send to ${dest}: "${subject}" (${mine.length} assigned)`); sent++; continue; }
     try { await send(dest, subject, body); sent++; log(`sent to ${dest}: ${subject}`); }
     catch (e) { failed++; log(`FAILED for ${dest}: ${e.message}`); }
