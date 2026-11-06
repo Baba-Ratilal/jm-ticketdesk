@@ -53,14 +53,25 @@ async function send(to, subject, html) {
   if (!res.ok) throw new Error(`Graph sendMail failed (${res.status}): ${await res.text()}`);
 }
 
-const byUrgency = (a, b) => (LEVEL[b.priority] || 0) - (LEVEL[a.priority] || 0) || new Date(a.created_at) - new Date(b.created_at);
+const late = (x) => (x.target_on && x.target_on < new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10) ? 1 : 0);
+const byUrgency = (a, b) => late(b) - late(a) || (LEVEL[b.priority] || 0) - (LEVEL[a.priority] || 0) || new Date(a.created_at) - new Date(b.created_at);
 const color = { Critical: "#c0372f", High: "#a15f00", Medium: "#46575d", Low: "#72848a" };
+
+const istDay = () => new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
+const fmtDay = (s) => new Date(s + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+function dueText(i) {
+  if (!i.target_on) return "";
+  const today = istDay();
+  const late = i.target_on < today;
+  const col = late ? "#c0372f" : i.target_on === today ? "#a15f00" : "#72848a";
+  return ` · <span style="color:${col};font-weight:${late ? 700 : 400}">${late ? "OVERDUE, was due" : "due"} ${fmtDay(i.target_on)}</span>`;
+}
 
 function row(i) {
   const url = `${base}/${i.kind === "Ticket" ? "tickets" : "issues"}/${i.id}`;
   return `<tr>
     <td style="padding:7px 10px;border-top:1px solid #e5eaec"><a href="${url}" style="color:#0b6e75;text-decoration:none;font-weight:600">${i.kind === "Ticket" ? "#" : "Issue #"}${i.no}</a>
-      <span style="color:#121a1d"> ${esc(i.title)}</span><div style="color:#72848a;font-size:12px">${esc(i.type)} · ${esc(i.status)}</div></td>
+      <span style="color:#121a1d"> ${esc(i.title)}</span><div style="color:#72848a;font-size:12px">${esc(i.type)} · ${esc(i.status)}${dueText(i)}</div></td>
     <td style="padding:7px 10px;border-top:1px solid #e5eaec;white-space:nowrap;color:${color[i.priority] || "#46575d"};font-weight:600">${esc(i.priority)}</td>
     <td style="padding:7px 10px;border-top:1px solid #e5eaec;white-space:nowrap;color:#46575d">${days(i.created_at)}d</td></tr>`;
 }
@@ -110,7 +121,7 @@ async function main() {
     "SELECT id, login_id, full_name, email, role FROM dbo.users WHERE role IN ('admin','agent') AND active=1"
   );
   const tickets = await query(
-    "SELECT id, ticket_no AS no, type, title, priority, status, created_at, assigned_to FROM dbo.tickets WHERE status NOT IN ('Resolved','Closed')"
+    "SELECT id, ticket_no AS no, type, title, priority, status, created_at, assigned_to, CONVERT(varchar(10), target_date, 23) AS target_on FROM dbo.tickets WHERE status NOT IN ('Resolved','Closed')"
   );
   const issues = await query(
     "SELECT id, issue_no AS no, type, title, priority, status, created_at, assigned_to FROM dbo.issues WHERE status NOT IN ('Resolved','Closed')"

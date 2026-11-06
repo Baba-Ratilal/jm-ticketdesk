@@ -72,7 +72,7 @@ export async function requireAdmin(req?: NextRequest): Promise<DbUser> {
 export async function getVisibleTicket(id: string, me: DbUser) {
   if (!isGuid(id)) throw new HttpError(404, "Ticket not found");
   const rows = await query(
-    `SELECT t.*, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
+    `SELECT t.*, CONVERT(varchar(10), t.target_date, 23) AS target_on, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
        FROM dbo.tickets t
        JOIN dbo.users c ON c.id = t.created_by
        LEFT JOIN dbo.users a ON a.id = t.assigned_to

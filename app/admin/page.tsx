@@ -7,7 +7,7 @@ import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import Kanban from "@/components/Kanban";
 import { api } from "@/lib/api";
-import { fmtDate, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDay, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
 type Admin = { id: string; email: string; full_name: string | null; phone?: string | null };
 type Quick = "" | "open" | "progress" | "unassigned" | "urgent" | "mine" | "mineProgress" | "mineDone";
@@ -212,7 +212,10 @@ function Dashboard() {
                   <PriorityBadge priority={t.priority} label={false} />
                   <span>{t.creator_name || t.creator_email}</span>
                 </div>
-                <div className="km">{t.assigned_to ? (t.assigned_to === me.id ? "Me" : t.assignee_name) : "Unassigned"}</div>
+                <div className="km">
+                  <span>{t.assigned_to ? (t.assigned_to === me.id ? "Me" : t.assignee_name) : "Unassigned"}</span>
+                  {t.target_on && <span className={`due ${isOverdue(t.target_on, t.status) ? "late" : ""}`}>Due {fmtDay(t.target_on)}</span>}
+                </div>
               </>
             )}
           />
@@ -235,6 +238,7 @@ function Dashboard() {
                 <th>Raised by</th>
                 <th>Priority</th>
                 <th>Status</th>
+                <th>Target</th>
                 <th>Assigned to</th>
               </tr>
             </thead>
@@ -260,6 +264,15 @@ function Dashboard() {
                   </td>
                   <td data-l="Status">
                     <StatusBadge status={t.status} />
+                  </td>
+                  <td data-l="Target">
+                    {t.target_on ? (
+                      <span className={`due ${isOverdue(t.target_on, t.status) ? "late" : ""}`}>{fmtDay(t.target_on)}</span>
+                    ) : isActive(t) ? (
+                      <span className="meta">not set</span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td data-l="Assigned to">
                     {isAdmin ? (

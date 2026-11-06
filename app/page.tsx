@@ -6,7 +6,7 @@ import AppShell, { useProfile } from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
-import { fmtDate, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDay, type Ticket } from "@/lib/constants";
 
 function MyTickets() {
   const profile = useProfile()!;
@@ -64,7 +64,7 @@ function MyTickets() {
               <div className="grow">
                 <div className="nm">{t.title}</div>
                 <div className="meta">
-                  <span className="mono">#{t.ticket_no}</span> · {t.category} · {fmtDate(t.created_at)}
+                  <span className="mono">#{t.ticket_no}</span> · {t.category} · {fmtDate(t.created_at)}{t.target_on && !["Resolved", "Closed"].includes(t.status) ? ` · target ${fmtDay(t.target_on)}` : ""}
                   {t.assignee_name && (
                     <>
                       {" "}· Handled by {t.assignee_name}

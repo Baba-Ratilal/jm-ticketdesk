@@ -8,7 +8,7 @@ import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import ScreenshotPicker from "@/components/ScreenshotPicker";
 import { api } from "@/lib/api";
-import { fmtDate, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDay, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
 type Comment = {
   id: string;
@@ -229,6 +229,10 @@ function TicketView() {
                 <Row k="Screen" v={ticket.erp_screen || "—"} />
               </>
             )}
+            <Row
+              k="Target date"
+              v={ticket.target_on ? `${fmtDay(ticket.target_on)}${isOverdue(ticket.target_on, ticket.status) ? " · overdue" : ""}` : "Not set yet"}
+            />
             <Row k="Assigned to" v={ticket.assignee_name || "Not assigned yet"} />
             {ticket.assignee_name && ticket.assignee_phone && (
               <div className="row">
@@ -279,6 +283,23 @@ function TicketView() {
                     <option key={s}>{s}</option>
                   ))}
                 </select>
+              </div>
+              <div className="fld">
+                <label className="lbl" htmlFor="m_td">Target date</label>
+                <div className="acts">
+                  <input
+                    id="m_td"
+                    type="date"
+                    className="in"
+                    min={ticket.created_at.slice(0, 10)}
+                    value={ticket.target_on || ""}
+                    onChange={(e) => e.target.value && update({ target_on: e.target.value })}
+                  />
+                  {ticket.target_on && (
+                    <button type="button" className="btn sm" onClick={() => update({ target_on: null })}>Clear</button>
+                  )}
+                </div>
+                <p className="fine" style={{ marginTop: 4 }}>The date we promise the requester. Used for on-time delivery %.</p>
               </div>
               <div className="fld">
                 <label className="lbl" htmlFor="m_pr">Priority</label>

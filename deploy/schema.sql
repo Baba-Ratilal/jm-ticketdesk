@@ -49,7 +49,8 @@ CREATE TABLE dbo.tickets (
   assigned_to  UNIQUEIDENTIFIER NULL CONSTRAINT FK_tickets_assigned_to REFERENCES dbo.users(id),
   created_at   DATETIME2      NOT NULL CONSTRAINT DF_tickets_created DEFAULT SYSUTCDATETIME(),
   updated_at   DATETIME2      NOT NULL CONSTRAINT DF_tickets_updated DEFAULT SYSUTCDATETIME(),
-  resolved_at  DATETIME2      NULL
+  resolved_at  DATETIME2      NULL,
+  target_date  DATE           NULL      -- promised date, set by the IT team / admin; drives on-time delivery %
 );
 CREATE INDEX IX_tickets_created_by  ON dbo.tickets(created_by);
 CREATE INDEX IX_tickets_assigned_to ON dbo.tickets(assigned_to);

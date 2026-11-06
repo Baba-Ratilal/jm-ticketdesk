@@ -60,6 +60,7 @@ export type Ticket = {
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
+  target_on?: string | null; // promised date, YYYY-MM-DD
   creator_name?: string | null;
   creator_email?: string | null;
   assignee_name?: string | null;
@@ -119,3 +120,20 @@ export function fmtDate(d: string) {
     minute: "2-digit",
   });
 }
+
+/** "2026-11-12" -> "12 Nov 2026" (date only, no time-zone shifting). */
+export function fmtDay(d: string | null | undefined) {
+  if (!d) return "";
+  const [y, m, day] = d.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, day).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/** Today as YYYY-MM-DD in this browser's time zone. */
+export function todayStr() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+}
+
+/** Past its target date and still not resolved. */
+export const isOverdue = (targetOn: string | null | undefined, status: string) =>
+  !!targetOn && !["Resolved", "Closed"].includes(status) && targetOn.slice(0, 10) < todayStr();

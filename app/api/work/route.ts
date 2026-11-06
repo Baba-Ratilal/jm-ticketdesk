@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   return handle(async () => {
     const me = await requireStaff(req);
     const tickets = await query(
-      `SELECT id, ticket_no, type, title, priority, status, created_at, updated_at
+      `SELECT id, ticket_no, type, title, priority, status, created_at, updated_at, CONVERT(varchar(10), target_date, 23) AS target_on
          FROM dbo.tickets WHERE assigned_to=@me AND status NOT IN ('Resolved','Closed')`,
       { me: me.id }
     );
