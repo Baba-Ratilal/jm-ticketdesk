@@ -23,7 +23,8 @@ type Attachment = { id: string; comment_id: string | null; file_name: string };
 type EventRow = { id: string; actor_name: string | null; action: string; detail: string | null; created_at: string };
 type Admin = { id: string; email: string; full_name: string | null; phone?: string | null };
 type LinkedIssue = { id: string; issue_no: number; title: string; status: string };
-type Detail = { ticket: Ticket; comments: Comment[]; attachments: Attachment[]; events: EventRow[]; admins: Admin[]; issues?: LinkedIssue[] };
+type TargetOld = { id: string; target_on: string; target_at: string | null; superseded_at: string; changed_by: string | null };
+type Detail = { target_history?: TargetOld[]; ticket: Ticket; comments: Comment[]; attachments: Attachment[]; events: EventRow[]; admins: Admin[]; issues?: LinkedIssue[] };
 
 const fileUrl = (a: Attachment) => `/api/files/${a.id}`;
 
@@ -81,7 +82,20 @@ function TicketView() {
     load();
   }, [load]);
 
-  async function update(patch: Record<string, string | null>) {
+  // draft target date / time: nothing is saved until the person confirms
+  const [tgtDate, setTgtDate] = useState("");
+  const [tgtTime, setTgtTime] = useState("");
+  useEffect(() => {
+    setTgtDate(data?.ticket.target_on || "");
+    setTgtTime(data?.ticket.target_at || "");
+  }, [data]);
+
+  async function saveTarget(date: string, time: string, question: string) {
+    if (!confirm(question)) return;
+    await update({ target_on: date || null, target_at: date ? time || null : null, confirm: true });
+  }
+
+  async function update(patch: Record<string, string | boolean | null>) {
     try {
       await api(`/api/tickets/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
       load();
@@ -233,6 +247,17 @@ function TicketView() {
               k="Target date"
               v={ticket.target_on ? `${fmtDue(ticket.target_on, ticket.target_at)}${isOverdue(ticket.target_on, ticket.status, ticket.target_at) ? " · overdue" : ""}` : "Not set yet"}
             />
+            {(data.target_history ?? []).length > 0 && (
+              <div className="row" style={{ display: "block" }}>
+                <span>Earlier targets</span>
+                {(data.target_history ?? []).map((h) => (
+                  <div key={h.id} className="fine">
+                    <s>{fmtDue(h.target_on, h.target_at)}</s>
+                    {` · changed ${fmtDate(h.superseded_at)}${h.changed_by ? ` by ${h.changed_by}` : ""}`}
+                  </div>
+                ))}
+              </div>
+            )}
             <Row k="Assigned to" v={ticket.assignee_name || "Not assigned yet"} />
             {ticket.assignee_name && ticket.assignee_phone && (
               <div className="row">
@@ -292,22 +317,53 @@ function TicketView() {
                     type="date"
                     className="in"
                     min={ticket.created_at.slice(0, 10)}
-                    value={ticket.target_on || ""}
-                    onChange={(e) => e.target.value && update({ target_on: e.target.value })}
+                    value={tgtDate}
+                    onChange={(e) => setTgtDate(e.target.value)}
                   />
                   <input
                     type="time"
                     className="in"
                     aria-label="Target time (optional)"
-                    disabled={!ticket.target_on}
-                    value={ticket.target_at || ""}
-                    onChange={(e) => update({ target_at: e.target.value || null })}
+                    disabled={!tgtDate}
+                    value={tgtTime}
+                    onChange={(e) => setTgtTime(e.target.value)}
                   />
-                  {ticket.target_on && (
-                    <button type="button" className="btn sm" onClick={() => update({ target_on: null })}>Clear</button>
-                  )}
                 </div>
-                <p className="fine" style={{ marginTop: 4 }}>The date (and, if you like, the time) we promise the requester. Used for on-time delivery %.</p>
+                {(tgtDate !== (ticket.target_on || "") || tgtTime !== (ticket.target_at || "")) && tgtDate && (
+                  <div className="acts" style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="btn pri sm"
+                      onClick={() =>
+                        saveTarget(
+                          tgtDate,
+                          tgtTime,
+                          ticket.target_on
+                            ? `Change the target from ${fmtDue(ticket.target_on, ticket.target_at)} to ${fmtDue(tgtDate, tgtTime)}?\n\nThe earlier date stays on record, struck through, and the requester will see the new one.`
+                            : `Set the target to ${fmtDue(tgtDate, tgtTime)}?\n\nThe requester will see this date.`
+                        )
+                      }
+                    >
+                      {ticket.target_on ? "Change target…" : "Set target…"}
+                    </button>
+                    <button type="button" className="btn sm" onClick={() => { setTgtDate(ticket.target_on || ""); setTgtTime(ticket.target_at || ""); }}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+                {ticket.target_on && tgtDate === ticket.target_on && tgtTime === (ticket.target_at || "") && (
+                  <div className="acts" style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="btn sm danger"
+                      onClick={() => saveTarget("", "", `Remove the target ${fmtDue(ticket.target_on, ticket.target_at)}? It stays on record, struck through.`)}
+                    >
+                      Remove target
+                    </button>
+                  </div>
+                )}
+                <p className="fine" style={{ marginTop: 4 }}>The date (and, if you like, the time) we promise the requester. Every confirmed change is kept on record. Used for on-time delivery %.</p>
+
               </div>
               <div className="fld">
                 <label className="lbl" htmlFor="m_pr">Priority</label>

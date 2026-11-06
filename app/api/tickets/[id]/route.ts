@@ -49,7 +49,20 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           { t: ticket.id }
         )
       : [];
-    return { ticket, comments, attachments, events, admins, issues };
+    let target_history: unknown[] = [];
+    try {
+      target_history = await query(
+        `SELECT h.id, CONVERT(varchar(10), h.target_date, 23) AS target_on, CONVERT(varchar(5), h.target_time, 108) AS target_at,
+                h.superseded_at, u.full_name AS changed_by
+           FROM dbo.ticket_targets h LEFT JOIN dbo.users u ON u.id = h.superseded_by
+          WHERE h.ticket_id = @t AND h.superseded_at IS NOT NULL
+          ORDER BY h.superseded_at DESC`,
+        { t: ticket.id }
+      );
+    } catch {
+      // history table not created yet — the ticket must still open
+    }
+    return { ticket, comments, attachments, events, admins, issues, target_history };
   });
 }
 
@@ -100,11 +113,45 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       }
       if (at && !/^([01]\d|2[0-3]):[0-5]\d$/.test(at)) throw new HttpError(400, "Enter a valid time");
       if (day !== (ticket.target_on ?? null) || at !== (ticket.target_at ?? null)) {
+        if (body.confirm !== true) throw new HttpError(400, "Please confirm the target date change");
+
+        // keep the history: the previous target is retired (shown struck through), the new one becomes current
+        try {
+          if (ticket.target_on) {
+            const [cur] = await query<{ id: string }>(
+              "SELECT TOP 1 id FROM dbo.ticket_targets WHERE ticket_id=@t AND superseded_at IS NULL ORDER BY set_at DESC",
+              { t: ticket.id }
+            );
+            if (cur) {
+              await query("UPDATE dbo.ticket_targets SET superseded_at=SYSUTCDATETIME(), superseded_by=@u WHERE ticket_id=@t AND superseded_at IS NULL", { t: ticket.id, u: me.id });
+            } else {
+              // a target set before history existed: record it now so it still shows as the earlier one
+              await query(
+                `INSERT INTO dbo.ticket_targets (ticket_id, target_date, target_time, set_by, set_at, superseded_at, superseded_by)
+                 VALUES (@t, CAST(@d AS date), CAST(@tm AS time(0)), NULL, NULL, SYSUTCDATETIME(), @u)`,
+                { t: ticket.id, d: ticket.target_on, tm: ticket.target_at ? `${ticket.target_at}:00` : null, u: me.id }
+              );
+            }
+          }
+          if (day) {
+            await query(
+              "INSERT INTO dbo.ticket_targets (ticket_id, target_date, target_time, set_by) VALUES (@t, CAST(@d AS date), CAST(@tm AS time(0)), @u)",
+              { t: ticket.id, d: day, tm: at ? `${at}:00` : null, u: me.id }
+            );
+          }
+        } catch (e) {
+          console.error("Target history not saved (run deploy/upgrade-target-history.sql?):", e);
+        }
+
         await query(
           "UPDATE dbo.tickets SET target_date=CAST(@d AS date), target_time=CAST(@t AS time(0)), updated_at=SYSUTCDATETIME() WHERE id=@id",
           { d: day, t: at ? `${at}:00` : null, id: ticket.id }
         );
-        await logEvent(ticket.id, me.id, "target date", day ? `Target → ${fmtDue(day, at)}` : "Target date removed");
+        await logEvent(ticket.id, me.id, "target date", day
+            ? ticket.target_on
+              ? `Target changed from ${fmtDue(ticket.target_on, ticket.target_at)} to ${fmtDue(day, at)}`
+              : `Target set to ${fmtDue(day, at)}`
+            : "Target date removed");
       }
     }
 

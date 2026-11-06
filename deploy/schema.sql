@@ -155,3 +155,17 @@ CREATE TABLE dbo.settings (
   updated_at DATETIME2     NOT NULL CONSTRAINT DF_settings_updated DEFAULT SYSUTCDATETIME()
 );
 GO
+
+-- Every confirmed target date / time; the current one has superseded_at NULL, earlier ones are shown struck through.
+CREATE TABLE dbo.ticket_targets (
+  id            UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_ttargets_id DEFAULT NEWID() CONSTRAINT PK_ttargets PRIMARY KEY,
+  ticket_id     UNIQUEIDENTIFIER NOT NULL CONSTRAINT FK_ttargets_ticket REFERENCES dbo.tickets(id),
+  target_date   DATE             NOT NULL,
+  target_time   TIME(0)          NULL,
+  set_by        UNIQUEIDENTIFIER NULL CONSTRAINT FK_ttargets_setby REFERENCES dbo.users(id),
+  set_at        DATETIME2        NULL CONSTRAINT DF_ttargets_setat DEFAULT SYSUTCDATETIME(),
+  superseded_at DATETIME2        NULL,
+  superseded_by UNIQUEIDENTIFIER NULL CONSTRAINT FK_ttargets_supby REFERENCES dbo.users(id)
+);
+CREATE INDEX IX_ttargets_ticket ON dbo.ticket_targets(ticket_id);
+GO
