@@ -16,8 +16,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!isGuid(params.id)) throw new HttpError(404, "User not found");
     const body = await req.json().catch(() => ({}));
 
-    const [u] = await query<{ role: string; active: boolean; phone: string | null; source: string; login_id: string | null }>(
-      "SELECT role, active, phone, source, login_id FROM dbo.users WHERE id=@id",
+    const [u] = await query<{ role: string; active: boolean; phone: string | null; source: string; login_id: string | null; email: string | null }>(
+      "SELECT role, active, phone, source, login_id, email FROM dbo.users WHERE id=@id",
       { id: params.id }
     );
     if (!u) throw new HttpError(404, "User not found");
@@ -49,6 +49,17 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       newPhone = p || null;
     }
 
+    let newEmail: string | null = u.email;
+    if (body.email !== undefined) {
+      const e = String(body.email ?? "").trim().toLowerCase();
+      if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw new HttpError(400, "Enter a valid email address");
+      if (e) {
+        const [dup] = await query("SELECT id FROM dbo.users WHERE email=@e AND id<>@id", { e, id: params.id });
+        if (dup) throw new HttpError(409, "Another user already has that email");
+      }
+      newEmail = e || null;
+    }
+
     // never leave the system without an active admin
     const losesAdmin = u.role === "admin" && u.active && (newRole !== "admin" || !newActive);
     if (losesAdmin) {
@@ -59,8 +70,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       if (n < 1) throw new HttpError(400, "There must be at least one active admin");
     }
 
-    await query("UPDATE dbo.users SET role=@role, active=@active, phone=@phone WHERE id=@id", {
+    await query("UPDATE dbo.users SET role=@role, active=@active, phone=@phone, email=@email WHERE id=@id", {
       phone: newPhone,
+      email: newEmail,
       role: newRole,
       active: newActive ? 1 : 0,
       id: params.id,

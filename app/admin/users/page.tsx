@@ -24,7 +24,7 @@ function Users() {
     load();
   }, []);
 
-  async function patch(u: Profile, body: { role?: string; active?: boolean; phone?: string }, confirmText?: string) {
+  async function patch(u: Profile, body: { role?: string; active?: boolean; phone?: string; email?: string }, confirmText?: string) {
     if (confirmText && !confirm(confirmText)) return;
     try {
       await api(`/api/users/${u.id}`, { method: "PATCH", body: JSON.stringify(body) });
@@ -142,6 +142,7 @@ function Users() {
               <th>Last sign-in</th>
               <th>Role</th>
               <th>Phone</th>
+              <th>Email (for daily digest)</th>
               <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
@@ -186,6 +187,23 @@ function Users() {
                       defaultValue={u.phone || ""}
                       onBlur={(e) => {
                         if (e.target.value.trim() !== (u.phone || "")) patch(u, { phone: e.target.value.trim() });
+                      }}
+                    />
+                  )}
+                </td>
+                <td data-l="Email">
+                  {u.role === "user" ? (
+                    <span className="meta">{u.email || "—"}</span>
+                  ) : (
+                    <input
+                      className="in"
+                      type="email"
+                      style={{ padding: "6px 9px", minWidth: 190 }}
+                      aria-label={`Email for ${u.full_name || u.login_id}`}
+                      placeholder="name@company.com"
+                      defaultValue={u.email || ""}
+                      onBlur={(e) => {
+                        if (e.target.value.trim().toLowerCase() !== (u.email || "")) patch(u, { email: e.target.value.trim() });
                       }}
                     />
                   )}

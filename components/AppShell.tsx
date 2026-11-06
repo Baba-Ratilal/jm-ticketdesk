@@ -48,6 +48,7 @@ export default function AppShell({
     { href: "/", label: "My tickets", icon: "tickets" },
     { href: "/tickets/new", label: "New ticket", icon: "plus" },
     ...(isStaff ? [{ href: "/admin", label: isAdmin ? "All tickets" : "Support queue", icon: "inbox" }] : []),
+    ...(isStaff ? [{ href: "/work", label: "My work", icon: "check" }] : []),
     ...(isStaff ? [{ href: "/issues", label: "Issues", icon: "issues" }] : []),
     ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
   ];

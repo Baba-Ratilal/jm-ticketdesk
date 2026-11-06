@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "set-password": "node --env-file=.env.local scripts/set-password.js",
-    "erp-sync": "node --env-file=.env.local scripts/erp-sync.js"
+    "erp-sync": "node --env-file=.env.local scripts/erp-sync.js",
+    "send-digest": "node --env-file=.env.local scripts/send-digest.js"
   },
   "dependencies": {
     "mssql": "^11.0.1",

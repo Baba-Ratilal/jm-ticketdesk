@@ -169,3 +169,15 @@ Do not edit files on the server by hand; the script refuses to update if you did
 **Boards.** Both **Issues** and the ticket queue (**All tickets / Support queue**) have a **Board / List** switch. On the board, drag a card to another column to change its status (on a phone use the "Move to…" menu on the card). IT-team members can only move tickets that are unassigned or assigned to them.
 
 **Updating the server.** This version adds database tables: run `deploy\upgrade-issues-passwords.sql` once in SSMS **before** starting the new version (safe to re-run; no restart needed).
+
+## My work and the daily to-do email
+
+**My work** (menu, IT team and admins) lists everything assigned to you — tickets and issues together, most urgent first, with how long each has been waiting. Admins also see a small table of what each team member has on their plate.
+
+**Daily email at 9 AM, 2 PM and 4 PM.** Each IT-team member and admin gets their own list plus the number of unassigned tickets; admins also get the team table. People with nothing assigned and an empty queue are skipped (admins always get it).
+
+Set-up, once:
+1. **Emails.** Users page → type each team member's email in the *Email* column (Rushab, Ram, Vaibhav, Danish, Prashant). Make sure each is set to *IT team* or *Admin*.
+2. **Sending.** Fill `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` and `MS_SENDER` in `.env.local` (same values as the ticket alert emails; section 3). `MS_SENDER` can be a shared mailbox such as `helpdesk@…` — the emails then come from the helpdesk, not from a person. The Entra app needs the *Mail.Send* application permission, ideally limited to that one mailbox.
+3. **Test:** `npm run send-digest -- --dry` shows who would get what and sends nothing. `npm run send-digest -- --to=you@company.com` sends every digest to your own address.
+4. **Schedule:** in an elevated PowerShell, `.\deploy\install-digest-task.ps1` (task "TicketDesk digest"). Try it with `Start-ScheduledTask -TaskName 'TicketDesk digest'`; the log is `logs\digest.log`.
