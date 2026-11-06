@@ -93,7 +93,7 @@ export default function AppShell({
               <Link href="/change-password" className="ni" title="Change password">
                 <Icon name="key" size={16} />
               </Link>
-              <button className="ni" onClick={() => signOut({ callbackUrl: "/login" })}>
+              <button className="ni" onClick={() => signOut({ redirect: false }).then(() => { window.location.href = "/login"; })}>
                 <Icon name="logout" size={16} />
                 Logout
               </button>
@@ -112,7 +112,7 @@ export default function AppShell({
                 {initials}
               </span>
               <ThemeToggle className="icon-top" />
-              <button className="icon-top" onClick={() => signOut({ callbackUrl: "/login" })} aria-label="Logout">
+              <button className="icon-top" onClick={() => signOut({ redirect: false }).then(() => { window.location.href = "/login"; })} aria-label="Logout">
                 <Icon name="logout" size={18} />
               </button>
             </div>

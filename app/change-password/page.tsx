@@ -84,7 +84,7 @@ export default function ChangePasswordPage() {
               {busy ? "Saving…" : "Save new password"}
             </button>
             {forced ? (
-              <button type="button" className="btn block" onClick={() => signOut({ callbackUrl: "/login" })}>Sign out</button>
+              <button type="button" className="btn block" onClick={() => signOut({ redirect: false }).then(() => { window.location.href = "/login"; })}>Sign out</button>
             ) : (
               <button type="button" className="btn block" onClick={() => router.replace("/")}>Cancel</button>
             )}
