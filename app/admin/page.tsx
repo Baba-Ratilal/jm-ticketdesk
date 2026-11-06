@@ -8,7 +8,7 @@ import Icon from "@/components/Icon";
 import DashboardPanel from "@/components/DashboardPanel";
 import Kanban from "@/components/Kanban";
 import { api } from "@/lib/api";
-import { fmtDate, fmtDay, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDue, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
 type Admin = { id: string; email: string; full_name: string | null; phone?: string | null };
 type Quick = "" | "open" | "progress" | "unassigned" | "urgent" | "mine" | "mineProgress" | "mineDone";
@@ -219,7 +219,7 @@ function Dashboard() {
                 </div>
                 <div className="km">
                   <span>{t.assigned_to ? (t.assigned_to === me.id ? "Me" : t.assignee_name) : "Unassigned"}</span>
-                  {t.target_on && <span className={`due ${isOverdue(t.target_on, t.status) ? "late" : ""}`}>Due {fmtDay(t.target_on)}</span>}
+                  {t.target_on && <span className={`due ${isOverdue(t.target_on, t.status, t.target_at) ? "late" : ""}`}>Due {fmtDue(t.target_on, t.target_at)}</span>}
                 </div>
               </>
             )}
@@ -272,7 +272,7 @@ function Dashboard() {
                   </td>
                   <td data-l="Target">
                     {t.target_on ? (
-                      <span className={`due ${isOverdue(t.target_on, t.status) ? "late" : ""}`}>{fmtDay(t.target_on)}</span>
+                      <span className={`due ${isOverdue(t.target_on, t.status, t.target_at) ? "late" : ""}`}>{fmtDue(t.target_on, t.target_at)}</span>
                     ) : isActive(t) ? (
                       <span className="meta">not set</span>
                     ) : (

@@ -8,7 +8,7 @@ import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import ScreenshotPicker from "@/components/ScreenshotPicker";
 import { api } from "@/lib/api";
-import { fmtDate, fmtDay, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDue, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
 type Comment = {
   id: string;
@@ -231,7 +231,7 @@ function TicketView() {
             )}
             <Row
               k="Target date"
-              v={ticket.target_on ? `${fmtDay(ticket.target_on)}${isOverdue(ticket.target_on, ticket.status) ? " · overdue" : ""}` : "Not set yet"}
+              v={ticket.target_on ? `${fmtDue(ticket.target_on, ticket.target_at)}${isOverdue(ticket.target_on, ticket.status, ticket.target_at) ? " · overdue" : ""}` : "Not set yet"}
             />
             <Row k="Assigned to" v={ticket.assignee_name || "Not assigned yet"} />
             {ticket.assignee_name && ticket.assignee_phone && (
@@ -295,11 +295,19 @@ function TicketView() {
                     value={ticket.target_on || ""}
                     onChange={(e) => e.target.value && update({ target_on: e.target.value })}
                   />
+                  <input
+                    type="time"
+                    className="in"
+                    aria-label="Target time (optional)"
+                    disabled={!ticket.target_on}
+                    value={ticket.target_at || ""}
+                    onChange={(e) => update({ target_at: e.target.value || null })}
+                  />
                   {ticket.target_on && (
                     <button type="button" className="btn sm" onClick={() => update({ target_on: null })}>Clear</button>
                   )}
                 </div>
-                <p className="fine" style={{ marginTop: 4 }}>The date we promise the requester. Used for on-time delivery %.</p>
+                <p className="fine" style={{ marginTop: 4 }}>The date (and, if you like, the time) we promise the requester. Used for on-time delivery %.</p>
               </div>
               <div className="fld">
                 <label className="lbl" htmlFor="m_pr">Priority</label>

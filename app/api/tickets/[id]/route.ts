@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { fmtDay, PRIORITIES, STATUSES } from "@/lib/constants";
+import { fmtDue, PRIORITIES, STATUSES } from "@/lib/constants";
 import { handle, HttpError } from "@/lib/http";
 import { notifyInBackground } from "@/lib/notify";
 import { getVisibleTicket, isStaff, logEvent, requireStaff, requireUser } from "@/lib/server";
@@ -89,16 +89,22 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       await logEvent(ticket.id, me.id, "priority", `Priority → ${body.priority}`);
     }
 
-    if (body.target_on !== undefined) {
-      const v = body.target_on ? String(body.target_on).slice(0, 10) : null;
-      if (v) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v))) throw new HttpError(400, "Enter a valid date");
+    if (body.target_on !== undefined || body.target_at !== undefined) {
+      let day: string | null = body.target_on !== undefined ? (body.target_on ? String(body.target_on).slice(0, 10) : null) : ticket.target_on ?? null;
+      let at: string | null = body.target_at !== undefined ? (body.target_at ? String(body.target_at).slice(0, 5) : null) : ticket.target_at ?? null;
+      if (!day) at = null; // a time needs a date
+      if (day) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || Number.isNaN(Date.parse(day))) throw new HttpError(400, "Enter a valid date");
         const created = new Date(new Date(ticket.created_at).getTime() + 330 * 60000).toISOString().slice(0, 10); // IST date
-        if (v < created) throw new HttpError(400, "The target date cannot be before the ticket was raised");
+        if (day < created) throw new HttpError(400, "The target date cannot be before the ticket was raised");
       }
-      if (v !== (ticket.target_on ?? null)) {
-        await query("UPDATE dbo.tickets SET target_date=CAST(@v AS date), updated_at=SYSUTCDATETIME() WHERE id=@id", { v, id: ticket.id });
-        await logEvent(ticket.id, me.id, "target date", v ? `Target date → ${fmtDay(v)}` : "Target date removed");
+      if (at && !/^([01]\d|2[0-3]):[0-5]\d$/.test(at)) throw new HttpError(400, "Enter a valid time");
+      if (day !== (ticket.target_on ?? null) || at !== (ticket.target_at ?? null)) {
+        await query(
+          "UPDATE dbo.tickets SET target_date=CAST(@d AS date), target_time=CAST(@t AS time(0)), updated_at=SYSUTCDATETIME() WHERE id=@id",
+          { d: day, t: at ? `${at}:00` : null, id: ticket.id }
+        );
+        await logEvent(ticket.id, me.id, "target date", day ? `Target → ${fmtDue(day, at)}` : "Target date removed");
       }
     }
 

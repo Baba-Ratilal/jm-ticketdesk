@@ -197,3 +197,5 @@ Set-up, once:
 Users page → **New tickets are assigned automatically to**: pick a person for IT tickets and one for ERP tickets (only IT-team members and admins are listed; choose "Nobody" to leave tickets in the queue). New tickets then go straight to that person, who is notified; the requester sees who is handling it. Admins can still reassign any ticket from the ticket page or the queue; IT-team members cannot take over a ticket assigned to someone else.
 
 Run `deploy\upgrade-auto-assign.sql` once in SSMS first (safe to re-run). If it has not been run, tickets are still saved normally — they are just not auto-assigned.
+
+**Target time (optional).** Next to the target date there is an optional time. With a time, a ticket counts as on time only if it is solved by that time on the target day, and it turns overdue (red) once that time passes; without a time it is on time until the end of the target day. Run `deploy\upgrade-target-time.sql` once in SSMS (after `upgrade-target-date.sql`) before starting this version.

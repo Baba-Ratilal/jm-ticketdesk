@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import { api } from "@/lib/api";
-import { fmtDay, isOverdue, priorityLevel } from "@/lib/constants";
+import { fmtDue, isOverdue, priorityLevel } from "@/lib/constants";
 
-type Item = { target_on?: string | null; id: string; kind: "Ticket" | "Issue"; no: number; type: string; title: string; priority: string; status: string; created_at: string };
+type Item = { target_on?: string | null; target_at?: string | null; id: string; kind: "Ticket" | "Issue"; no: number; type: string; title: string; priority: string; status: string; created_at: string };
 type Member = { id: string; full_name: string | null; login_id: string | null; role: string; tickets: number; issues: number; urgent: number };
 type Work = {
   tickets: (Omit<Item, "kind" | "no"> & { ticket_no: number })[];
@@ -36,7 +36,7 @@ function MyWork() {
       ...w.issues.map((i) => ({ ...i, kind: "Issue" as const, no: i.issue_no })),
     ];
     // most urgent first, then the one waiting longest
-    const late = (x: Item) => (isOverdue(x.target_on, x.status) ? 1 : 0);
+    const late = (x: Item) => (isOverdue(x.target_on, x.status, x.target_at) ? 1 : 0);
     return all.sort((a, b) => late(b) - late(a) || (priorityLevel[b.priority] || 0) - (priorityLevel[a.priority] || 0) || +new Date(a.created_at) - +new Date(b.created_at));
   }, [w]);
 
@@ -84,7 +84,7 @@ function MyWork() {
                   <td data-l="Priority"><PriorityBadge priority={i.priority} /></td>
                   <td data-l="Status"><StatusBadge status={i.status} /></td>
                   <td data-l="Target">
-                    {i.target_on ? <span className={`due ${isOverdue(i.target_on, i.status) ? "late" : ""}`}>{fmtDay(i.target_on)}</span> : <span className="meta">—</span>}
+                    {i.target_on ? <span className={`due ${isOverdue(i.target_on, i.status, i.target_at) ? "late" : ""}`}>{fmtDue(i.target_on, i.target_at)}</span> : <span className="meta">—</span>}
                   </td>
                   <td data-l="Waiting">{age(i.created_at)} day{age(i.created_at) === 1 ? "" : "s"}</td>
                 </tr>

@@ -53,18 +53,29 @@ async function send(to, subject, html) {
   if (!res.ok) throw new Error(`Graph sendMail failed (${res.status}): ${await res.text()}`);
 }
 
-const late = (x) => (x.target_on && x.target_on < new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10) ? 1 : 0);
+const istNow = () => new Date(Date.now() + 330 * 60000).toISOString(); // India time as an ISO string
+const isLate = (x) => {
+  if (!x.target_on) return false;
+  const now = istNow();
+  const today = now.slice(0, 10);
+  if (x.target_on !== today) return x.target_on < today;
+  return !!x.target_at && x.target_at < now.slice(11, 16);
+};
+const late = (x) => (isLate(x) ? 1 : 0);
 const byUrgency = (a, b) => late(b) - late(a) || (LEVEL[b.priority] || 0) - (LEVEL[a.priority] || 0) || new Date(a.created_at) - new Date(b.created_at);
 const color = { Critical: "#c0372f", High: "#a15f00", Medium: "#46575d", Low: "#72848a" };
 
-const istDay = () => new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
 const fmtDay = (s) => new Date(s + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+const fmtClock = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return new Date(Date.UTC(2000, 0, 1, h, m)).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC" }).toUpperCase();
+};
 function dueText(i) {
   if (!i.target_on) return "";
-  const today = istDay();
-  const late = i.target_on < today;
-  const col = late ? "#c0372f" : i.target_on === today ? "#a15f00" : "#72848a";
-  return ` · <span style="color:${col};font-weight:${late ? 700 : 400}">${late ? "OVERDUE, was due" : "due"} ${fmtDay(i.target_on)}</span>`;
+  const lateNow = isLate(i);
+  const col = lateNow ? "#c0372f" : i.target_on === istNow().slice(0, 10) ? "#a15f00" : "#72848a";
+  const when = fmtDay(i.target_on) + (i.target_at ? ", " + fmtClock(i.target_at) : "");
+  return ` · <span style="color:${col};font-weight:${lateNow ? 700 : 400}">${lateNow ? "OVERDUE, was due" : "due"} ${when}</span>`;
 }
 
 function row(i) {
@@ -121,7 +132,7 @@ async function main() {
     "SELECT id, login_id, full_name, email, role FROM dbo.users WHERE role IN ('admin','agent') AND active=1"
   );
   const tickets = await query(
-    "SELECT id, ticket_no AS no, type, title, priority, status, created_at, assigned_to, CONVERT(varchar(10), target_date, 23) AS target_on FROM dbo.tickets WHERE status NOT IN ('Resolved','Closed')"
+    "SELECT id, ticket_no AS no, type, title, priority, status, created_at, assigned_to, CONVERT(varchar(10), target_date, 23) AS target_on, CONVERT(varchar(5), target_time, 108) AS target_at FROM dbo.tickets WHERE status NOT IN ('Resolved','Closed')"
   );
   const issues = await query(
     "SELECT id, issue_no AS no, type, title, priority, status, created_at, assigned_to FROM dbo.issues WHERE status NOT IN ('Resolved','Closed')"

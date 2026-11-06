@@ -10,7 +10,12 @@ export const dynamic = "force-dynamic";
 const IST = "DATEADD(minute, 330, t.resolved_at)";
 const SOLVED = `t.resolved_at IS NOT NULL AND t.status IN ('Resolved','Closed')`;
 const ACTIVE = `t.status NOT IN ('Resolved','Closed')`;
-const ON_TIME = `t.target_date IS NOT NULL AND CAST(${IST} AS date) <= t.target_date`;
+// on time = solved by the target time when one is set, otherwise by the end of the target day
+const ON_TIME = `t.target_date IS NOT NULL AND (
+  (t.target_time IS NULL AND CAST(${IST} AS date) <= t.target_date) OR
+  (t.target_time IS NOT NULL AND ${IST} <= DATEADD(second, DATEDIFF(second, CAST('00:00:00' AS time), t.target_time), CAST(t.target_date AS datetime2))))`;
+// overdue = past the target day, or past the target time today
+const LATE = `(t.target_date < CAST(@today AS date) OR (t.target_date = CAST(@today AS date) AND t.target_time IS NOT NULL AND t.target_time < CAST(@nowt AS time)))`;
 
 const istToday = () => new Date(Date.now() + 330 * 60000);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -22,6 +27,7 @@ export async function GET(req: NextRequest) {
     const period = req.nextUrl.searchParams.get("period") || "month";
     const now = istToday();
     const today = iso(now);
+    const nowt = now.toISOString().slice(11, 19); // HH:MM:SS, India time
     const y = now.getUTCFullYear(), m = now.getUTCMonth();
     let from = "2000-01-01";
     if (period === "month") from = iso(new Date(Date.UTC(y, m, 1)));
@@ -31,14 +37,14 @@ export async function GET(req: NextRequest) {
 
     const [pending] = await query<any>(
       `SELECT COUNT(*) AS total,
-              ISNULL(SUM(CASE WHEN t.target_date < CAST(@today AS date) THEN 1 ELSE 0 END),0) AS overdue,
-              ISNULL(SUM(CASE WHEN t.target_date = CAST(@today AS date) THEN 1 ELSE 0 END),0) AS due_today,
+              ISNULL(SUM(CASE WHEN ${LATE} THEN 1 ELSE 0 END),0) AS overdue,
+              ISNULL(SUM(CASE WHEN t.target_date = CAST(@today AS date) AND NOT ${LATE} THEN 1 ELSE 0 END),0) AS due_today,
               ISNULL(SUM(CASE WHEN t.target_date IS NULL THEN 1 ELSE 0 END),0) AS no_target,
               ISNULL(SUM(CASE WHEN t.assigned_to IS NULL THEN 1 ELSE 0 END),0) AS unassigned,
               ISNULL(SUM(CASE WHEN t.type='IT' THEN 1 ELSE 0 END),0) AS it,
               ISNULL(SUM(CASE WHEN t.type='ERP' THEN 1 ELSE 0 END),0) AS erp
          FROM dbo.tickets t WHERE ${ACTIVE}`,
-      { today }
+      { today, nowt }
     );
 
     const [solved] = await query<any>(
@@ -54,12 +60,12 @@ export async function GET(req: NextRequest) {
     const people = await query<any>(
       `SELECT u.id, u.full_name, u.login_id,
               (SELECT COUNT(*) FROM dbo.tickets t WHERE t.assigned_to=u.id AND ${ACTIVE}) AS pending,
-              (SELECT COUNT(*) FROM dbo.tickets t WHERE t.assigned_to=u.id AND ${ACTIVE} AND t.target_date < CAST(@today AS date)) AS overdue,
+              (SELECT COUNT(*) FROM dbo.tickets t WHERE t.assigned_to=u.id AND ${ACTIVE} AND ${LATE}) AS overdue,
               (SELECT COUNT(*) FROM dbo.tickets t WHERE t.assigned_to=u.id AND ${SOLVED} AND CAST(${IST} AS date) >= CAST(@from AS date)) AS solved,
               (SELECT COUNT(*) FROM dbo.tickets t WHERE t.assigned_to=u.id AND ${SOLVED} AND CAST(${IST} AS date) >= CAST(@from AS date) AND t.target_date IS NOT NULL) AS with_target,
               (SELECT COUNT(*) FROM dbo.tickets t WHERE t.assigned_to=u.id AND ${SOLVED} AND CAST(${IST} AS date) >= CAST(@from AS date) AND ${ON_TIME}) AS on_time
          FROM dbo.users u WHERE u.role IN ('admin','agent') AND u.active=1 ORDER BY u.full_name`,
-      { today, from }
+      { today, nowt, from }
     );
 
     // last 6 months, always (independent of the period switch)

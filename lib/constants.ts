@@ -61,6 +61,7 @@ export type Ticket = {
   updated_at: string;
   resolved_at: string | null;
   target_on?: string | null; // promised date, YYYY-MM-DD
+  target_at?: string | null; // optional promised time, HH:MM (24 h)
   creator_name?: string | null;
   creator_email?: string | null;
   assignee_name?: string | null;
@@ -134,6 +135,24 @@ export function todayStr() {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
 }
 
-/** Past its target date and still not resolved. */
-export const isOverdue = (targetOn: string | null | undefined, status: string) =>
-  !!targetOn && !["Resolved", "Closed"].includes(status) && targetOn.slice(0, 10) < todayStr();
+/** "17:30" -> "5:30 PM" */
+export function fmtClock(t: string | null | undefined) {
+  if (!t) return "";
+  const [h, m] = t.slice(0, 5).split(":").map(Number);
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase();
+}
+
+/** "12 Nov 2026" or "12 Nov 2026, 5:30 PM" */
+export const fmtDue = (on: string | null | undefined, at?: string | null) =>
+  on ? fmtDay(on) + (at ? `, ${fmtClock(at)}` : "") : "";
+
+/** Past its target date (or target time, when one is set) and still not resolved. */
+export function isOverdue(targetOn: string | null | undefined, status: string, targetAt?: string | null) {
+  if (!targetOn || ["Resolved", "Closed"].includes(status)) return false;
+  const day = targetOn.slice(0, 10);
+  const today = todayStr();
+  if (day !== today) return day < today;
+  if (!targetAt) return false;
+  const n = new Date();
+  return targetAt.slice(0, 5) < `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
+}

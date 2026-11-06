@@ -10,7 +10,7 @@ import { isStaff, logEvent, requireUser } from "@/lib/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SELECT = `SELECT TOP 2000 t.*, CONVERT(varchar(10), t.target_date, 23) AS target_on, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
+const SELECT = `SELECT TOP 2000 t.*, CONVERT(varchar(10), t.target_date, 23) AS target_on, CONVERT(varchar(5), t.target_time, 108) AS target_at, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
   FROM dbo.tickets t
   JOIN dbo.users c ON c.id = t.created_by
   LEFT JOIN dbo.users a ON a.id = t.assigned_to`;
