@@ -186,7 +186,7 @@ Set-up, once:
 
 **Target date.** The IT team or an admin sets it on a ticket (Manage panel → *Target date*): the date we promise the requester. The requester sees it on their ticket list and on the ticket. Tickets past their target date are shown in red in the queue, board, *My work* and the daily email, and listed first.
 
-**Dashboard** (menu, IT team and admins): *Pending* (with overdue, due today, no target date, unassigned, IT vs ERP), *Solved* in the chosen period (this month / last 30 days / quarter / year / all time, with the average days to solve), and **On-time delivery %**. It also shows a per-person table and a 6-month trend.
+**Overview** (first item under the menu for the IT team and admins, above the ticket queue): *Pending* (with overdue, due today, no target date, unassigned, IT vs ERP), *Solved* in the chosen period (this month / last 30 days / quarter / year / all time, with the average days to solve), and **On-time delivery %**. It also shows a per-person table and a 6-month trend.
 
 **On-time delivery %** = tickets solved on or before their target date ÷ tickets solved that had a target date, in the chosen period. Dates are judged in India time. Tickets solved without a target date are not counted (the dashboard says how many), so set a target date on every ticket you take.
 

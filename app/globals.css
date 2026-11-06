@@ -305,3 +305,5 @@ kbd { font-family: var(--font-mono); font-size: 11.5px; background: var(--surfac
 .due { font-size: 12px; font-weight: 600; color: var(--fg-2); }
 .due.late { color: var(--bad); }
 @media (max-width: 900px) { .two[style] { grid-template-columns: minmax(0, 1fr) !important; } }
+.more { margin-bottom: 14px; }
+.more > summary { cursor: pointer; font-weight: 650; color: var(--fg-2); padding: 4px 2px; }

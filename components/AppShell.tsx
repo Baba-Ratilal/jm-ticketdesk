@@ -47,8 +47,7 @@ export default function AppShell({
   const items = [
     { href: "/", label: "My tickets", icon: "tickets" },
     { href: "/tickets/new", label: "New ticket", icon: "plus" },
-    ...(isStaff ? [{ href: "/admin", label: isAdmin ? "All tickets" : "Support queue", icon: "inbox" }] : []),
-    ...(isStaff ? [{ href: "/dashboard", label: "Dashboard", icon: "chart" }] : []),
+    ...(isStaff ? [{ href: "/admin", label: "Overview", icon: "chart" }] : []),
     ...(isStaff ? [{ href: "/work", label: "My work", icon: "check" }] : []),
     ...(isStaff ? [{ href: "/issues", label: "Issues", icon: "issues" }] : []),
     ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
@@ -125,7 +124,7 @@ export default function AppShell({
           {items.map((i) => (
             <Link key={i.href} href={i.href} className={`tb ${isOn(i.href) ? "on" : ""}`}>
               <Icon name={i.icon} size={20} />
-              {i.label.replace("My tickets", "Mine").replace("All tickets", "All")}
+              {i.label.replace("My tickets", "Mine")}
             </Link>
           ))}
         </nav>

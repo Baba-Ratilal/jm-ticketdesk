@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
+import DashboardPanel from "@/components/DashboardPanel";
 import Kanban from "@/components/Kanban";
 import { api } from "@/lib/api";
 import { fmtDate, fmtDay, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
@@ -124,7 +125,7 @@ function Dashboard() {
     <>
       <div className="ph">
         <div>
-          <h1>{isAdmin ? "All tickets" : "Support queue"}</h1>
+          <h1>Overview</h1>
           <p className="sub">
             {isAdmin
               ? "Assign, prioritise and resolve IT & ERP requests."
@@ -136,6 +137,10 @@ function Dashboard() {
           <button className={`seg ${view === "list" ? "on" : ""}`} onClick={() => pickView("list")}>List</button>
         </div>
       </div>
+
+      <DashboardPanel />
+
+      <div className="sec-h" style={{ margin: "22px 2px 10px" }}>{isAdmin ? "All tickets" : "Support queue"}</div>
 
       {isAdmin ? (
         <div className="kpis">
