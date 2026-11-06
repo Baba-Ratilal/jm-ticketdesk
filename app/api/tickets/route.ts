@@ -4,6 +4,7 @@ import { CATEGORIES, DEPARTMENTS, ERP_MODULES, PRIORITIES, UNITS } from "@/lib/c
 import { formFiles, prepareFiles, storeFiles } from "@/lib/files";
 import { handle, HttpError } from "@/lib/http";
 import { notifyInBackground } from "@/lib/notify";
+import { getAutoAssign } from "@/lib/settings";
 import { isStaff, logEvent, requireUser } from "@/lib/server";
 
 export const runtime = "nodejs";
@@ -91,7 +92,27 @@ export async function POST(req: NextRequest) {
       me: me.id,
     });
     await logEvent(t.id, me.id, "created", `${type} · ${d.category} · ${d.priority}`);
+
+    // hand it to the default person for this type (set by an admin); a problem here must never lose the ticket
+    let autoAssigned = false;
+    try {
+      const target = (await getAutoAssign())[type as "IT" | "ERP"];
+      if (target) {
+        const [a] = await query<{ id: string; full_name: string | null; login_id: string | null }>(
+          "SELECT id, full_name, login_id FROM dbo.users WHERE id=@id AND role IN ('admin','agent') AND active=1",
+          { id: target }
+        );
+        if (a) {
+          await query("UPDATE dbo.tickets SET assigned_to=@a WHERE id=@t", { a: a.id, t: t.id });
+          await logEvent(t.id, me.id, "assigned", `Auto-assigned to ${a.full_name || a.login_id}`);
+          autoAssigned = true;
+        }
+      }
+    } catch (e) {
+      console.error("Auto-assign failed (run deploy/upgrade-auto-assign.sql?):", e);
+    }
     notifyInBackground("created", t.id, me.id);
+    if (autoAssigned) notifyInBackground("assigned", t.id, me.id);
     return { id: t.id };
   });
 }

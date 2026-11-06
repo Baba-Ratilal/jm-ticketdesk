@@ -146,3 +146,11 @@ CREATE TABLE dbo.issue_events (
 );
 CREATE INDEX IX_ievents_issue ON dbo.issue_events(issue_id);
 GO
+
+-- App settings (e.g. who new IT / ERP tickets are assigned to automatically)
+CREATE TABLE dbo.settings (
+  k          NVARCHAR(50)  NOT NULL CONSTRAINT PK_settings PRIMARY KEY,
+  v          NVARCHAR(200) NULL,
+  updated_at DATETIME2     NOT NULL CONSTRAINT DF_settings_updated DEFAULT SYSUTCDATETIME()
+);
+GO

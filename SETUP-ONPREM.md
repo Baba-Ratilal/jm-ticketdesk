@@ -191,3 +191,9 @@ Set-up, once:
 **On-time delivery %** = tickets solved on or before their target date ÷ tickets solved that had a target date, in the chosen period. Dates are judged in India time. Tickets solved without a target date are not counted (the dashboard says how many), so set a target date on every ticket you take.
 
 **Updating the server.** Run `deploy\upgrade-target-date.sql` once in SSMS **before** starting the new version (safe to re-run; no restart).
+
+## Automatic assignment
+
+Users page → **New tickets are assigned automatically to**: pick a person for IT tickets and one for ERP tickets (only IT-team members and admins are listed; choose "Nobody" to leave tickets in the queue). New tickets then go straight to that person, who is notified; the requester sees who is handling it. Admins can still reassign any ticket from the ticket page or the queue; IT-team members cannot take over a ticket assigned to someone else.
+
+Run `deploy\upgrade-auto-assign.sql` once in SSMS first (safe to re-run). If it has not been run, tickets are still saved normally — they are just not auto-assigned.

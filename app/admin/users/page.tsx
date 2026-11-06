@@ -14,6 +14,7 @@ function Users() {
   const [form, setForm] = useState({ login_id: "", full_name: "", role: "user", phone: "", password: "" });
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [auto, setAuto] = useState<{ IT: string | null; ERP: string | null; staff: { id: string; full_name: string | null; login_id: string | null }[] } | null>(null);
   const [secret, setSecret] = useState<{ who: string; loginId: string; password: string } | null>(null);
 
   async function load() {
@@ -22,7 +23,17 @@ function Users() {
   }
   useEffect(() => {
     load();
+    api<any>("/api/settings/auto-assign").then(setAuto).catch(() => {});
   }, []);
+
+  async function saveAuto(type: "IT" | "ERP", id: string) {
+    try {
+      await api("/api/settings/auto-assign", { method: "PUT", body: JSON.stringify({ [type]: id || null }) });
+      setAuto((a) => (a ? { ...a, [type]: id || null } : a));
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
 
   async function patch(u: Profile, body: { role?: string; active?: boolean; phone?: string; email?: string }, confirmText?: string) {
     if (confirmText && !confirm(confirmText)) return;
@@ -81,6 +92,26 @@ function Users() {
           <input className="in" placeholder="Search name or user ID" aria-label="Search users" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       </div>
+
+      {auto && (
+        <div className="card pad form" style={{ marginBottom: 14 }}>
+          <div className="sec-h" style={{ marginBottom: 0 }}>New tickets are assigned automatically to</div>
+          <div className="grid2">
+            {(["IT", "ERP"] as const).map((type) => (
+              <div key={type}>
+                <label className="lbl" htmlFor={`aa_${type}`}>{type} tickets</label>
+                <select id={`aa_${type}`} className="in sel" value={auto[type] || ""} onChange={(e) => saveAuto(type, e.target.value)}>
+                  <option value="">Nobody (stays in the queue)</option>
+                  {auto.staff.map((s) => (
+                    <option key={s.id} value={s.id}>{s.full_name || s.login_id}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <p className="fine">Admins can still reassign any ticket from the ticket page or the queue. Only IT-team members and admins appear here.</p>
+        </div>
+      )}
 
       {secret && (
         <div className="card pad form" style={{ marginBottom: 14 }}>
