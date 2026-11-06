@@ -18,11 +18,19 @@ export type DbUser = {
   source: "local" | "erp";
 };
 
-/** Block cross-site form posts: the Origin header must match our own address. */
+/**
+ * Block cross-site form posts: the page that sent the request must come from the same address
+ * the browser used to reach us (so it works for the IP, the server name or localhost alike).
+ */
 function checkOrigin(req: NextRequest) {
   const origin = req.headers.get("origin");
-  if (!origin || !process.env.NEXTAUTH_URL) return;
-  if (origin !== new URL(process.env.NEXTAUTH_URL).origin) throw new HttpError(403, "Bad origin");
+  if (!origin) return;
+  const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "").split(",")[0].trim().toLowerCase();
+  let originHost = "";
+  try {
+    originHost = new URL(origin).host.toLowerCase();
+  } catch {}
+  if (!host || originHost !== host) throw new HttpError(403, "Bad origin");
 }
 
 /** The signed-in user, read fresh from the database (so role changes apply immediately). */
