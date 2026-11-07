@@ -169,3 +169,21 @@ CREATE TABLE dbo.ticket_targets (
 );
 CREATE INDEX IX_ttargets_ticket ON dbo.ticket_targets(ticket_id);
 GO
+
+-- MOM action points (minutes of meeting)
+CREATE TABLE dbo.mom_points (
+  id          UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_mom_id DEFAULT NEWID() CONSTRAINT PK_mom PRIMARY KEY,
+  sr_no       BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT UQ_mom_sr UNIQUE,
+  mom_date    DATE            NOT NULL,
+  point       NVARCHAR(1000)  NOT NULL,
+  target_date DATE            NULL,
+  status      NVARCHAR(20)    NOT NULL CONSTRAINT DF_mom_status DEFAULT 'Open'
+              CONSTRAINT CK_mom_status CHECK (status IN ('Open','In Progress','On Hold','Done')),
+  assigned_to UNIQUEIDENTIFIER NULL CONSTRAINT FK_mom_assigned REFERENCES dbo.users(id),
+  remark      NVARCHAR(1000)  NULL,
+  created_by  UNIQUEIDENTIFIER NULL CONSTRAINT FK_mom_created REFERENCES dbo.users(id),
+  created_at  DATETIME2       NOT NULL CONSTRAINT DF_mom_created DEFAULT SYSUTCDATETIME(),
+  updated_at  DATETIME2       NOT NULL CONSTRAINT DF_mom_updated DEFAULT SYSUTCDATETIME()
+);
+CREATE INDEX IX_mom_status ON dbo.mom_points(status);
+GO

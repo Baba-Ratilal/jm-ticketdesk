@@ -14,6 +14,7 @@ const P: Record<string, string> = {
   chart: "M4 20V11M10 20V4M16 20v-6M22 20H2",
   check: "M4 12.5l5 5L20 6.5",
   issues: "M12 3l9.5 16.5h-19zM12 10v4.5M12 17.5h.01",
+  mom: "M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7",
   key: "M14.5 9.5a4 4 0 1 1-3.2 1.6L4 18v2h2.5v-2H9v-2.5h2.2",
 };
 

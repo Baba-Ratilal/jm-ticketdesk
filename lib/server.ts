@@ -119,3 +119,12 @@ export async function logIssueEvent(issueId: string, actorId: string, action: st
 
 export const listStaff = () =>
   query("SELECT id, email, full_name, login_id, phone FROM dbo.users WHERE role IN ('admin','agent') AND active=1 ORDER BY full_name");
+
+/** Validate an optional assignee: must be an active IT-team member or admin. */
+export async function checkAssignee(id: unknown): Promise<string | null> {
+  if (!id) return null;
+  const [a] = await query("SELECT id FROM dbo.users WHERE id=@id AND role IN ('admin','agent') AND active=1", { id: String(id) });
+  if (!a) throw new HttpError(400, "Assign to an active IT-team member or admin");
+  return String(id);
+}
+

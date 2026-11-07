@@ -201,3 +201,11 @@ Run `deploy\upgrade-auto-assign.sql` once in SSMS first (safe to re-run). If it 
 **Target time (optional).** Next to the target date there is an optional time. With a time, a ticket counts as on time only if it is solved by that time on the target day, and it turns overdue (red) once that time passes; without a time it is on time until the end of the target day. Run `deploy\upgrade-target-time.sql` once in SSMS (after `upgrade-target-date.sql`) before starting this version.
 
 **Confirming and keeping the history of target dates.** Choosing a target date/time does nothing until you press **Set target… / Change target…** and confirm the question that appears (it shows the old and new value). Every confirmed change is kept: the earlier targets appear under *Earlier targets* on the ticket, struck through, with who changed them and when, and the timeline records "changed from … to …". Removing a target also needs confirmation. Run `deploy\upgrade-target-history.sql` once in SSMS (after the target date and target time scripts) before starting this version; if it has not been run, tickets still open and save normally, they just do not keep the history.
+
+## MOM tab (minutes of meeting)
+
+1. In SSMS run `deploy\upgrade-mom.sql` once (before updating the app).
+2. Update the app as usual. A **MOM** item appears in the menu for the IT team and admins.
+3. Columns: Sr no, MOM date, Point, Target date, Status (Open / In Progress / On Hold / Done), Assigned to, Remark.
+4. Admin can add, edit and delete points. The IT team can view all points and change only the status and remark (press Save on the row).
+5. A target date in the past on a point that is not Done shows in red as overdue.

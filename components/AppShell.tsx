@@ -50,6 +50,7 @@ export default function AppShell({
     ...(isStaff ? [{ href: "/admin", label: "Overview", icon: "chart" }] : []),
     ...(isStaff ? [{ href: "/work", label: "My work", icon: "check" }] : []),
     ...(isStaff ? [{ href: "/issues", label: "Issues", icon: "issues" }] : []),
+    ...(isStaff ? [{ href: "/mom", label: "MOM", icon: "mom" }] : []),
     ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
   ];
   const isOn = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
