@@ -221,6 +221,13 @@ Run `deploy\upgrade-auto-assign.sql` once in SSMS first (safe to re-run). If it 
 2. When an IT-team member or admin sets a ticket or issue to Resolved or Closed, the closing date is filled in with today. They can change it in the Manage panel (not before the raised date, not in the future). Reopening clears it.
 3. It is shown on the ticket / issue page and in the lists. The on-time % still uses the actual time it was resolved, not this date.
 
-## Importing the ERP user list
+## Importing many users at once
 
-Run `deploy\import-erp-users.sql` once in SSMS. It adds the listed ERP users (103 people; shared gate/canteen/company logins are left out, see the top of the file) as normal users with no password yet. Existing user IDs are not touched. They can sign in after the nightly ERP sync has filled in their ERP passwords. Afterwards, set roles for the IT team on the Users page.
+`deploy\users-to-import.csv` holds the ERP user list (103 people; shared gate/canteen/company logins left out). On the server, in the app folder:
+
+```
+node --env-file=.env.local scripts\import-users.js --dry
+node --env-file=.env.local scripts\import-users.js
+```
+
+The first command only shows what it would do. The second adds everyone as a normal user with the temporary password `Admin@123`; each person must choose their own password at first sign-in (it is a TicketDesk password, not the ERP one). Existing user IDs are skipped. Use `--password "Other@123"` for a different temporary password. Set the IT team's roles afterwards on the Users page.
