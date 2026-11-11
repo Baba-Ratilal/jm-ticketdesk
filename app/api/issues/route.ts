@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   return handle(async () => {
     await requireStaff(req);
     const issues = await query(
-      `SELECT TOP 2000 i.*, CONVERT(varchar(10), i.raised_date, 23) AS raised_on, c.full_name AS creator_name, a.full_name AS assignee_name,
+      `SELECT TOP 2000 i.*, CONVERT(varchar(10), i.raised_date, 23) AS raised_on, CONVERT(varchar(10), i.closed_date, 23) AS closed_on, c.full_name AS creator_name, a.full_name AS assignee_name,
               (SELECT COUNT(*) FROM dbo.issue_tickets x WHERE x.issue_id = i.id) AS ticket_count
          FROM dbo.issues i
          JOIN dbo.users c ON c.id = i.created_by

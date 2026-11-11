@@ -7,7 +7,7 @@ import AppShell from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
-import { fmtDate, fmtDay, PRIORITIES, STATUSES, type Issue } from "@/lib/constants";
+import { fmtDate, fmtDay, todayStr, PRIORITIES, STATUSES, type Issue } from "@/lib/constants";
 
 type Staff = { id: string; full_name: string | null; login_id: string | null };
 type Comment = { id: string; author_name: string | null; body: string; created_at: string };
@@ -107,7 +107,7 @@ function IssueView() {
             <PriorityBadge priority={issue.priority} />
           </div>
           <h1>Issue #{issue.issue_no}</h1>
-          <p className="sub">Opened by {issue.creator_name} · {issue.raised_on ? fmtDay(issue.raised_on) : fmtDate(issue.created_at)}</p>
+          <p className="sub">Opened by {issue.creator_name} · {issue.raised_on ? fmtDay(issue.raised_on) : fmtDate(issue.created_at)}{issue.closed_on ? ` · closed ${fmtDay(issue.closed_on)}` : ""}</p>
         </div>
       </div>
 
@@ -171,6 +171,16 @@ function IssueView() {
                 {STATUSES.map((s) => <option key={s}>{s}</option>)}
               </select>
             </div>
+            {(issue.status === "Resolved" || issue.status === "Closed") && (
+              <div className="fld">
+                <label className="lbl" htmlFor="m_cd">Closing date</label>
+                <input
+                  id="m_cd" className="in" type="date" max={todayStr()} min={issue.raised_on || undefined}
+                  value={issue.closed_on || ""}
+                  onChange={(e) => e.target.value && update({ closed_on: e.target.value })}
+                />
+              </div>
+            )}
             <div className="fld">
               <label className="lbl" htmlFor="m_pr">Priority</label>
               <select id="m_pr" className="in" value={issue.priority} onChange={(e) => update({ priority: e.target.value })}>

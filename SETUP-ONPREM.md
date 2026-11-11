@@ -214,3 +214,9 @@ Run `deploy\upgrade-auto-assign.sql` once in SSMS first (safe to re-run). If it 
 
 1. In SSMS run `deploy\upgrade-raised-date.sql` once, **before** updating the app (the app reads the new column).
 2. The New ticket and New issue forms now have a **Date** field (today by default; past dates allowed, future dates not). It is shown in the lists and on the ticket / issue page. Existing rows keep the date they were created.
+
+## Closing date
+
+1. In SSMS run `deploy\upgrade-closed-date.sql` once (after `upgrade-raised-date.sql`, before updating the app).
+2. When an IT-team member or admin sets a ticket or issue to Resolved or Closed, the closing date is filled in with today. They can change it in the Manage panel (not before the raised date, not in the future). Reopening clears it.
+3. It is shown on the ticket / issue page and in the lists. The on-time % still uses the actual time it was resolved, not this date.

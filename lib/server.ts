@@ -72,7 +72,7 @@ export async function requireAdmin(req?: NextRequest): Promise<DbUser> {
 export async function getVisibleTicket(id: string, me: DbUser) {
   if (!isGuid(id)) throw new HttpError(404, "Ticket not found");
   const rows = await query(
-    `SELECT t.*, CONVERT(varchar(10), t.raised_date, 23) AS raised_on, CONVERT(varchar(10), t.target_date, 23) AS target_on, CONVERT(varchar(5), t.target_time, 108) AS target_at, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
+    `SELECT t.*, CONVERT(varchar(10), t.raised_date, 23) AS raised_on, CONVERT(varchar(10), t.closed_date, 23) AS closed_on, CONVERT(varchar(10), t.target_date, 23) AS target_on, CONVERT(varchar(5), t.target_time, 108) AS target_at, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
        FROM dbo.tickets t
        JOIN dbo.users c ON c.id = t.created_by
        LEFT JOIN dbo.users a ON a.id = t.assigned_to
@@ -99,7 +99,7 @@ export async function logEvent(ticketId: string, actorId: string, action: string
 export async function getIssue(id: string) {
   if (!isGuid(id)) throw new HttpError(404, "Issue not found");
   const [i] = await query(
-    `SELECT i.*, CONVERT(varchar(10), i.raised_date, 23) AS raised_on, c.full_name AS creator_name, a.full_name AS assignee_name
+    `SELECT i.*, CONVERT(varchar(10), i.raised_date, 23) AS raised_on, CONVERT(varchar(10), i.closed_date, 23) AS closed_on, c.full_name AS creator_name, a.full_name AS assignee_name
        FROM dbo.issues i
        JOIN dbo.users c ON c.id = i.created_by
        LEFT JOIN dbo.users a ON a.id = i.assigned_to
@@ -139,5 +139,14 @@ export function parseRaisedOn(v: unknown): string | null {
   const today = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
   if (s > today) throw new HttpError(400, "The date cannot be in the future");
   if (s < "2020-01-01") throw new HttpError(400, "Invalid date");
+  return s;
+}
+
+/** Closing date picked by staff: valid, not in the future, not before the date the item was raised. */
+export function parseClosedOn(v: unknown, raisedOn: string | null | undefined, createdAt: string | Date): string {
+  const s = parseRaisedOn(v);
+  if (!s) throw new HttpError(400, "Choose the closing date");
+  const from = raisedOn || new Date(new Date(createdAt).getTime() + 330 * 60000).toISOString().slice(0, 10);
+  if (s < from) throw new HttpError(400, "The closing date cannot be before the date it was raised");
   return s;
 }

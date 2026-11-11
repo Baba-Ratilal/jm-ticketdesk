@@ -8,7 +8,7 @@ import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import ScreenshotPicker from "@/components/ScreenshotPicker";
 import { api } from "@/lib/api";
-import { fmtDate, fmtDay, fmtDue, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDay, fmtDue, todayStr, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
 type Comment = {
   id: string;
@@ -269,12 +269,22 @@ function TicketView() {
                 </b>
               </div>
             )}
-            {ticket.resolved_at && <Row k="Resolved" v={fmtDate(ticket.resolved_at)} />}
+            {ticket.closed_on ? <Row k="Closing date" v={fmtDay(ticket.closed_on)} /> : ticket.resolved_at ? <Row k="Resolved" v={fmtDate(ticket.resolved_at)} /> : null}
           </div>
 
           {isStaff && (
             <div className="card pad form" style={{ gap: 12 }}>
               <div className="sec-h" style={{ marginBottom: 0 }}>Manage</div>
+              {(ticket.status === "Resolved" || ticket.status === "Closed") && (
+                <div className="fld">
+                  <label className="lbl" htmlFor="m_cd">Closing date</label>
+                  <input
+                    id="m_cd" className="in" type="date" max={todayStr()} min={ticket.raised_on || undefined}
+                    value={ticket.closed_on || ""}
+                    onChange={(e) => e.target.value && update({ closed_on: e.target.value })}
+                  />
+                </div>
+              )}
               {isAdmin ? (
                 <div className="fld">
                   <label className="lbl" htmlFor="m_as">Assign to</label>

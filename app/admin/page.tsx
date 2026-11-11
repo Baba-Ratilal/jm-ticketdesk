@@ -257,7 +257,7 @@ function Dashboard() {
                     </Link>
                     <div className="meta" style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
                       <TypeBadge type={t.type} />
-                      {t.category} · {t.raised_on ? fmtDay(t.raised_on) : fmtDate(t.created_at)}
+                      {t.category} · {t.raised_on ? fmtDay(t.raised_on) : fmtDate(t.created_at)}{t.closed_on ? ` → closed ${fmtDay(t.closed_on)}` : ""}
                     </div>
                   </td>
                   <td data-l="Raised by">

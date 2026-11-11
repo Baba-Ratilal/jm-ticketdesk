@@ -192,3 +192,8 @@ GO
 ALTER TABLE dbo.tickets ADD raised_date DATE NULL;
 ALTER TABLE dbo.issues  ADD raised_date DATE NULL;
 GO
+
+-- Closing date (set when Resolved/Closed, editable by the IT team)
+ALTER TABLE dbo.tickets ADD closed_date DATE NULL;
+ALTER TABLE dbo.issues  ADD closed_date DATE NULL;
+GO

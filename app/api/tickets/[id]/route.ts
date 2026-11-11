@@ -3,7 +3,7 @@ import { query } from "@/lib/db";
 import { fmtDue, PRIORITIES, STATUSES } from "@/lib/constants";
 import { handle, HttpError } from "@/lib/http";
 import { notifyInBackground } from "@/lib/notify";
-import { getVisibleTicket, isStaff, logEvent, requireStaff, requireUser } from "@/lib/server";
+import { getVisibleTicket, isStaff, logEvent, parseClosedOn, requireStaff, requireUser } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,12 +85,23 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       await query(
         `UPDATE dbo.tickets
             SET status=@v, updated_at=SYSUTCDATETIME(),
-                resolved_at = CASE WHEN @v IN ('Resolved','Closed') THEN COALESCE(resolved_at, SYSUTCDATETIME()) ELSE NULL END
+                resolved_at = CASE WHEN @v IN ('Resolved','Closed') THEN COALESCE(resolved_at, SYSUTCDATETIME()) ELSE NULL END,
+                closed_date = CASE WHEN @v IN ('Resolved','Closed') THEN COALESCE(closed_date, CAST(DATEADD(minute, 330, SYSUTCDATETIME()) AS date)) ELSE NULL END
           WHERE id=@id`,
         { v: body.status, id: ticket.id }
       );
       await logEvent(ticket.id, me.id, "status", `Status → ${body.status}`);
       notifyInBackground("status", ticket.id, me.id, { status: body.status });
+    }
+
+    if (body.closed_on !== undefined) {
+      const status = body.status ?? ticket.status;
+      if (status !== "Resolved" && status !== "Closed") throw new HttpError(400, "Set the status to Resolved or Closed first");
+      const day = parseClosedOn(body.closed_on, ticket.raised_on, ticket.created_at);
+      if (day !== (ticket.closed_on ?? null)) {
+        await query("UPDATE dbo.tickets SET closed_date=@d, updated_at=SYSUTCDATETIME() WHERE id=@id", { d: day, id: ticket.id });
+        await logEvent(ticket.id, me.id, "closing date", `Closing date → ${day}`);
+      }
     }
 
     if (body.priority !== undefined && body.priority !== ticket.priority) {

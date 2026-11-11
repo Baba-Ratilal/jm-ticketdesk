@@ -152,7 +152,7 @@ function Issues() {
                     <div className="meta" style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
                       <TypeBadge type={i.type} />
                       {i.erp_module && <span>{i.erp_module} · </span>}
-                      {i.raised_on ? fmtDay(i.raised_on) : fmtDate(i.created_at)}
+                      {i.raised_on ? fmtDay(i.raised_on) : fmtDate(i.created_at)}{i.closed_on ? ` → closed ${fmtDay(i.closed_on)}` : ""}
                     </div>
                   </td>
                   <td data-l="Priority"><PriorityBadge priority={i.priority} /></td>

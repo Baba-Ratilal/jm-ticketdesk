@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     // a reply from the user on a resolved ticket reopens it
     if (!isAdmin && ticket.status === "Resolved") {
-      await query("UPDATE dbo.tickets SET status='Open', resolved_at=NULL WHERE id=@id", { id: ticket.id });
+      await query("UPDATE dbo.tickets SET status='Open', resolved_at=NULL, closed_date=NULL WHERE id=@id", { id: ticket.id });
       await logEvent(ticket.id, me.id, "status", "Status → Open (reopened by user)");
     }
 

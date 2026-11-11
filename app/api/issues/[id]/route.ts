@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { PRIORITIES, STATUSES } from "@/lib/constants";
 import { handle, HttpError } from "@/lib/http";
-import { getIssue, listStaff, logIssueEvent, requireStaff } from "@/lib/server";
+import { getIssue, listStaff, logIssueEvent, parseClosedOn, requireStaff } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,11 +47,22 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       await query(
         `UPDATE dbo.issues
             SET status=@v, updated_at=SYSUTCDATETIME(),
-                resolved_at = CASE WHEN @v IN ('Resolved','Closed') THEN COALESCE(resolved_at, SYSUTCDATETIME()) ELSE NULL END
+                resolved_at = CASE WHEN @v IN ('Resolved','Closed') THEN COALESCE(resolved_at, SYSUTCDATETIME()) ELSE NULL END,
+                closed_date = CASE WHEN @v IN ('Resolved','Closed') THEN COALESCE(closed_date, CAST(DATEADD(minute, 330, SYSUTCDATETIME()) AS date)) ELSE NULL END
           WHERE id=@id`,
         { v: body.status, id: issue.id }
       );
       await logIssueEvent(issue.id, me.id, "status", `Status → ${body.status}`);
+    }
+
+    if (body.closed_on !== undefined) {
+      const status = body.status ?? issue.status;
+      if (status !== "Resolved" && status !== "Closed") throw new HttpError(400, "Set the status to Resolved or Closed first");
+      const day = parseClosedOn(body.closed_on, issue.raised_on, issue.created_at);
+      if (day !== (issue.closed_on ?? null)) {
+        await query("UPDATE dbo.issues SET closed_date=@d, updated_at=SYSUTCDATETIME() WHERE id=@id", { d: day, id: issue.id });
+        await logIssueEvent(issue.id, me.id, "closing date", `Closing date → ${day}`);
+      }
     }
 
     if (body.priority !== undefined && body.priority !== issue.priority) {

@@ -64,7 +64,7 @@ function MyTickets() {
               <div className="grow">
                 <div className="nm">{t.title}</div>
                 <div className="meta">
-                  <span className="mono">#{t.ticket_no}</span> · {t.category} · {t.raised_on ? fmtDay(t.raised_on) : fmtDate(t.created_at)}{t.target_on && !["Resolved", "Closed"].includes(t.status) ? ` · target ${fmtDue(t.target_on, t.target_at)}` : ""}
+                  <span className="mono">#{t.ticket_no}</span> · {t.category} · {t.raised_on ? fmtDay(t.raised_on) : fmtDate(t.created_at)}{t.closed_on ? ` → closed ${fmtDay(t.closed_on)}` : ""}{t.target_on && !["Resolved", "Closed"].includes(t.status) ? ` · target ${fmtDue(t.target_on, t.target_at)}` : ""}
                   {t.assignee_name && (
                     <>
                       {" "}· Handled by {t.assignee_name}
