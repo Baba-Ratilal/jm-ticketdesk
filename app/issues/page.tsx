@@ -7,7 +7,7 @@ import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import Kanban from "@/components/Kanban";
 import { api } from "@/lib/api";
-import { fmtDate, PRIORITIES, STATUSES, type Issue } from "@/lib/constants";
+import { fmtDate, fmtDay, PRIORITIES, STATUSES, type Issue } from "@/lib/constants";
 
 type Staff = { id: string; full_name: string | null; login_id: string | null };
 const DONE_DAYS = 30;
@@ -152,7 +152,7 @@ function Issues() {
                     <div className="meta" style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
                       <TypeBadge type={i.type} />
                       {i.erp_module && <span>{i.erp_module} · </span>}
-                      {fmtDate(i.created_at)}
+                      {i.raised_on ? fmtDay(i.raised_on) : fmtDate(i.created_at)}
                     </div>
                   </td>
                   <td data-l="Priority"><PriorityBadge priority={i.priority} /></td>

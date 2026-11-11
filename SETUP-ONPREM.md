@@ -209,3 +209,8 @@ Run `deploy\upgrade-auto-assign.sql` once in SSMS first (safe to re-run). If it 
 3. Columns: Sr no, MOM date, Point, Target date, Status (Open / In Progress / On Hold / Done), Assigned to, Remark.
 4. Admin can add, edit and delete points. The IT team can view all points and change only the status and remark (press Save on the row).
 5. A target date in the past on a point that is not Done shows in red as overdue.
+
+## Date on tickets and issues
+
+1. In SSMS run `deploy\upgrade-raised-date.sql` once, **before** updating the app (the app reads the new column).
+2. The New ticket and New issue forms now have a **Date** field (today by default; past dates allowed, future dates not). It is shown in the lists and on the ticket / issue page. Existing rows keep the date they were created.

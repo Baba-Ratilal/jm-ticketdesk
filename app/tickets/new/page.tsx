@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import AppShell, { useProfile } from "@/components/AppShell";
 import ScreenshotPicker from "@/components/ScreenshotPicker";
 import { api } from "@/lib/api";
-import { CATEGORIES, DEPARTMENTS, ERP_MODULES, PRIORITIES, UNITS } from "@/lib/constants";
+import { CATEGORIES, todayStr, DEPARTMENTS, ERP_MODULES, PRIORITIES, UNITS } from "@/lib/constants";
 
 function Form() {
   const router = useRouter();
@@ -18,6 +18,7 @@ function Form() {
   const [department, setDepartment] = useState(profile.department || "");
   const [erpModule, setErpModule] = useState("");
   const [erpScreen, setErpScreen] = useState("");
+  const [raisedOn, setRaisedOn] = useState(todayStr());
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +41,7 @@ function Form() {
           type,
           category,
           priority,
+          raised_on: raisedOn,
           description,
           unit,
           department,
@@ -138,6 +140,11 @@ function Form() {
             </div>
           </div>
         )}
+
+        <div className="fld">
+          <label className="lbl" htmlFor="f_date">Date</label>
+          <input id="f_date" className="in" type="date" required max={todayStr()} value={raisedOn} onChange={(e) => setRaisedOn(e.target.value)} style={{ maxWidth: 220 }} />
+        </div>
 
         <div className="fld">
           <label className="lbl" htmlFor="f_desc">Describe the issue</label>

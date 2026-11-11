@@ -7,7 +7,7 @@ import AppShell from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
-import { fmtDate, PRIORITIES, STATUSES, type Issue } from "@/lib/constants";
+import { fmtDate, fmtDay, PRIORITIES, STATUSES, type Issue } from "@/lib/constants";
 
 type Staff = { id: string; full_name: string | null; login_id: string | null };
 type Comment = { id: string; author_name: string | null; body: string; created_at: string };
@@ -107,7 +107,7 @@ function IssueView() {
             <PriorityBadge priority={issue.priority} />
           </div>
           <h1>Issue #{issue.issue_no}</h1>
-          <p className="sub">Opened by {issue.creator_name} · {fmtDate(issue.created_at)}</p>
+          <p className="sub">Opened by {issue.creator_name} · {issue.raised_on ? fmtDay(issue.raised_on) : fmtDate(issue.created_at)}</p>
         </div>
       </div>
 

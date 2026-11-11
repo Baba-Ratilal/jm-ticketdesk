@@ -8,7 +8,7 @@ import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import ScreenshotPicker from "@/components/ScreenshotPicker";
 import { api } from "@/lib/api";
-import { fmtDate, fmtDue, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDay, fmtDue, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
 type Comment = {
   id: string;
@@ -156,7 +156,7 @@ function TicketView() {
           </div>
           <h1>Ticket #{ticket.ticket_no}</h1>
           <p className="sub">
-            Raised by {ticket.creator_name || ticket.creator_email} · {fmtDate(ticket.created_at)}
+            Raised by {ticket.creator_name || ticket.creator_email} · {ticket.raised_on ? fmtDay(ticket.raised_on) : fmtDate(ticket.created_at)}
           </p>
         </div>
       </div>

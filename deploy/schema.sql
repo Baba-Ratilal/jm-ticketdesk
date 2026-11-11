@@ -187,3 +187,8 @@ CREATE TABLE dbo.mom_points (
 );
 CREATE INDEX IX_mom_status ON dbo.mom_points(status);
 GO
+
+-- Date picked when raising a ticket / issue
+ALTER TABLE dbo.tickets ADD raised_date DATE NULL;
+ALTER TABLE dbo.issues  ADD raised_date DATE NULL;
+GO

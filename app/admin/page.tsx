@@ -8,7 +8,7 @@ import Icon from "@/components/Icon";
 import DashboardPanel from "@/components/DashboardPanel";
 import Kanban from "@/components/Kanban";
 import { api } from "@/lib/api";
-import { fmtDate, fmtDue, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
+import { fmtDate, fmtDay, fmtDue, isOverdue, PRIORITIES, STATUSES, type Ticket } from "@/lib/constants";
 
 type Admin = { id: string; email: string; full_name: string | null; phone?: string | null };
 type Quick = "" | "open" | "progress" | "unassigned" | "urgent" | "mine" | "mineProgress" | "mineDone";
@@ -257,7 +257,7 @@ function Dashboard() {
                     </Link>
                     <div className="meta" style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
                       <TypeBadge type={t.type} />
-                      {t.category} · {fmtDate(t.created_at)}
+                      {t.category} · {t.raised_on ? fmtDay(t.raised_on) : fmtDate(t.created_at)}
                     </div>
                   </td>
                   <td data-l="Raised by">

@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { ERP_MODULES, PRIORITIES } from "@/lib/constants";
 import { handle, HttpError } from "@/lib/http";
-import { getVisibleTicket, listStaff, logIssueEvent, requireStaff } from "@/lib/server";
+import { getVisibleTicket, listStaff, logIssueEvent, parseRaisedOn, requireStaff } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   return handle(async () => {
     await requireStaff(req);
     const issues = await query(
-      `SELECT TOP 2000 i.*, c.full_name AS creator_name, a.full_name AS assignee_name,
+      `SELECT TOP 2000 i.*, CONVERT(varchar(10), i.raised_date, 23) AS raised_on, c.full_name AS creator_name, a.full_name AS assignee_name,
               (SELECT COUNT(*) FROM dbo.issue_tickets x WHERE x.issue_id = i.id) AS ticket_count
          FROM dbo.issues i
          JOIN dbo.users c ON c.id = i.created_by
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     if (!(PRIORITIES as readonly string[]).includes(priority)) throw new HttpError(400, "Invalid priority");
     const erpModule = d.type === "ERP" && ERP_MODULES.includes(d.erp_module) ? d.erp_module : null;
 
+    const raisedOn = parseRaisedOn(d.raised_on);
     let assignee: string | null = null;
     if (d.assigned_to) {
       const [a] = await query("SELECT id FROM dbo.users WHERE id=@id AND role IN ('admin','agent') AND active=1", { id: String(d.assigned_to) });
@@ -45,10 +46,11 @@ export async function POST(req: NextRequest) {
     }
 
     const [row] = await query<{ id: string }>(
-      `INSERT INTO dbo.issues (type, title, description, priority, erp_module, created_by, assigned_to)
+      `INSERT INTO dbo.issues (type, title, description, priority, erp_module, created_by, assigned_to, raised_date)
        OUTPUT INSERTED.id
-       VALUES (@type, @title, @description, @priority, @erpModule, @me, @assignee)`,
-      { type: d.type, title, description, priority, erpModule, me: me.id, assignee }
+       VALUES (@type, @title, @description, @priority, @erpModule, @me, @assignee,
+               ISNULL(@raisedOn, CAST(DATEADD(minute, 330, SYSUTCDATETIME()) AS date)))`,
+      { type: d.type, title, description, priority, erpModule, me: me.id, assignee, raisedOn }
     );
     await logIssueEvent(row.id, me.id, "created", `${d.type} · ${priority}`);
 

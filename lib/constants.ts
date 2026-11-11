@@ -58,6 +58,7 @@ export type Ticket = {
   created_by: string;
   assigned_to: string | null;
   created_at: string;
+  raised_on?: string | null; // the date picked when raised, YYYY-MM-DD
   updated_at: string;
   resolved_at: string | null;
   target_on?: string | null; // promised date, YYYY-MM-DD
@@ -95,6 +96,7 @@ export type Issue = {
   created_by: string;
   assigned_to: string | null;
   created_at: string;
+  raised_on?: string | null; // the date picked when raised, YYYY-MM-DD
   updated_at: string;
   resolved_at: string | null;
   creator_name?: string | null;

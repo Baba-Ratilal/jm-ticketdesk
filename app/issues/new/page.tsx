@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
-import { ERP_MODULES, PRIORITIES, type Ticket } from "@/lib/constants";
+import { ERP_MODULES, todayStr, PRIORITIES, type Ticket } from "@/lib/constants";
 
 type Staff = { id: string; full_name: string | null; login_id: string | null };
 
@@ -15,7 +15,7 @@ function NewIssue() {
   const me = useProfile()!;
   const ticketId = useSearchParams().get("ticket");
   const [staff, setStaff] = useState<Staff[]>([]);
-  const [f, setF] = useState({ type: "IT", title: "", description: "", priority: "Medium", erp_module: "", assigned_to: "" });
+  const [f, setF] = useState({ type: "IT", title: "", description: "", priority: "Medium", erp_module: "", assigned_to: "", raised_on: todayStr() });
   const [fromTicket, setFromTicket] = useState<Ticket | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -90,6 +90,10 @@ function NewIssue() {
               {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name || s.login_id}{s.id === me.id ? " (me)" : ""}</option>)}
             </select>
           </div>
+        </div>
+        <div>
+          <label className="lbl" htmlFor="i_date">Date</label>
+          <input id="i_date" className="in" type="date" required max={todayStr()} value={f.raised_on} onChange={(e) => setF({ ...f, raised_on: e.target.value })} style={{ maxWidth: 220 }} />
         </div>
         <div>
           <label className="lbl" htmlFor="i_title">Title</label>

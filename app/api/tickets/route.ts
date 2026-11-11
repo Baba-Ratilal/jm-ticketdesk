@@ -5,12 +5,12 @@ import { formFiles, prepareFiles, storeFiles } from "@/lib/files";
 import { handle, HttpError } from "@/lib/http";
 import { notifyInBackground } from "@/lib/notify";
 import { getAutoAssign } from "@/lib/settings";
-import { isStaff, logEvent, requireUser } from "@/lib/server";
+import { isStaff, logEvent, parseRaisedOn, requireUser } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SELECT = `SELECT TOP 2000 t.*, CONVERT(varchar(10), t.target_date, 23) AS target_on, CONVERT(varchar(5), t.target_time, 108) AS target_at, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
+const SELECT = `SELECT TOP 2000 t.*, CONVERT(varchar(10), t.raised_date, 23) AS raised_on, CONVERT(varchar(10), t.target_date, 23) AS target_on, CONVERT(varchar(5), t.target_time, 108) AS target_at, c.full_name AS creator_name, c.email AS creator_email, a.full_name AS assignee_name, a.phone AS assignee_phone
   FROM dbo.tickets t
   JOIN dbo.users c ON c.id = t.created_by
   LEFT JOIN dbo.users a ON a.id = t.assigned_to`;
@@ -64,13 +64,16 @@ export async function POST(req: NextRequest) {
     const erpModule = type === "ERP" && ERP_MODULES.includes(d.erp_module) ? d.erp_module : null;
     const erpScreen = type === "ERP" ? clean(d.erp_screen, 150) || null : null;
 
+    const raisedOn = parseRaisedOn(d.raised_on);
+
     // check the screenshots before saving anything
     const files = await prepareFiles(formFiles(form));
 
     const [t] = await query<{ id: string }>(
-      `INSERT INTO dbo.tickets (type, category, priority, title, description, unit, department, erp_module, erp_screen, created_by)
+      `INSERT INTO dbo.tickets (type, category, priority, title, description, unit, department, erp_module, erp_screen, created_by, raised_date)
        OUTPUT INSERTED.id
-       VALUES (@type, @category, @priority, @title, @description, @unit, @department, @erpModule, @erpScreen, @me)`,
+       VALUES (@type, @category, @priority, @title, @description, @unit, @department, @erpModule, @erpScreen, @me,
+               ISNULL(@raisedOn, CAST(DATEADD(minute, 330, SYSUTCDATETIME()) AS date)))`,
       {
         type,
         category: d.category,
@@ -82,6 +85,7 @@ export async function POST(req: NextRequest) {
         erpModule,
         erpScreen,
         me: me.id,
+        raisedOn,
       }
     );
 
