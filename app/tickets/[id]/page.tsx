@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
@@ -56,6 +56,17 @@ function TicketView() {
   const me = useProfile()!;
   const isAdmin = me.role === "admin";
   const isStaff = me.role !== "user";
+  const router = useRouter();
+
+  async function removeTicket() {
+    if (!confirm("Delete this ticket for good? Its replies, screenshots and history are deleted too. This cannot be undone.")) return;
+    try {
+      await api(`/api/tickets/${id}`, { method: "DELETE" });
+      router.replace("/admin");
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
 
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -383,6 +394,11 @@ function TicketView() {
                   ))}
                 </select>
               </div>
+              {isAdmin && (
+                <button type="button" className="btn" style={{ color: "var(--bad)" }} onClick={removeTicket}>
+                  Delete ticket
+                </button>
+              )}
             </div>
           )}
 

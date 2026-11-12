@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server";
-import { query } from "@/lib/db";
+import { isGuid, query } from "@/lib/db";
 import { fmtDue, PRIORITIES, STATUSES } from "@/lib/constants";
 import { handle, HttpError } from "@/lib/http";
+import { removeTicketFiles } from "@/lib/files";
 import { notifyInBackground } from "@/lib/notify";
-import { getVisibleTicket, isStaff, logEvent, parseClosedOn, requireStaff, requireUser } from "@/lib/server";
+import { getVisibleTicket, isStaff, logEvent, parseClosedOn, requireAdmin, requireStaff, requireUser } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -188,6 +189,31 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       await logEvent(ticket.id, me.id, "assigned", `Assigned to ${name}`);
       if (body.assigned_to) notifyInBackground("assigned", ticket.id, me.id);
     }
+    return { ok: true };
+  });
+}
+
+/** Admin only: permanently delete a ticket with its replies, screenshots, history and links to issues. */
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  return handle(async () => {
+    const { id } = await ctx.params;
+    await requireAdmin(req);
+    if (!isGuid(id)) throw new HttpError(404, "Not found");
+    const [t] = await query("SELECT id FROM dbo.tickets WHERE id=@id", { id });
+    if (!t) throw new HttpError(404, "Not found");
+    await query(
+      `SET XACT_ABORT ON;
+       BEGIN TRAN;
+         DELETE FROM dbo.ticket_attachments WHERE ticket_id=@id;
+         DELETE FROM dbo.ticket_comments    WHERE ticket_id=@id;
+         DELETE FROM dbo.ticket_events      WHERE ticket_id=@id;
+         DELETE FROM dbo.issue_tickets      WHERE ticket_id=@id;
+         IF OBJECT_ID('dbo.ticket_targets') IS NOT NULL DELETE FROM dbo.ticket_targets WHERE ticket_id=@id;
+         DELETE FROM dbo.tickets WHERE id=@id;
+       COMMIT;`,
+      { id }
+    );
+    await removeTicketFiles(id).catch(() => {});
     return { ok: true };
   });
 }

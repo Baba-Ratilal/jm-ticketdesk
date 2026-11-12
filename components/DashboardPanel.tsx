@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 
 type Dash = {
   period: string;
+  issues: { pending: number; it: number; erp: number; unassigned: number; urgent: number; solved: number } | null;
+  mom: { total: number; pending: number; overdue: number; due_today: number; unassigned: number; done: number; done_pct: number | null } | null;
   pending: { total: number; overdue: number; due_today: number; no_target: number; unassigned: number; it: number; erp: number };
   solved: { count: number; with_target: number; on_time: number; on_time_pct: number | null; avg_days: number | null };
-  people: { id: string; name: string; pending: number; overdue: number; solved: number; on_time_pct: number | null; with_target: number }[];
+  people: { id: string; name: string; pending: number; overdue: number; solved: number; on_time_pct: number | null; with_target: number; issues: number; mom: number; mom_overdue: number }[];
   trend: { label: string; solved: number; with_target: number; on_time_pct: number | null }[];
 };
 
@@ -55,6 +58,7 @@ export default function DashboardPanel() {
         </select>
       </div>
 
+      <div className="sec-h" style={{ margin: "4px 0 8px" }}>Tickets</div>
       <div className="kpis">
         <div className="kpi static">
           <span className="kl">Pending</span>
@@ -88,6 +92,68 @@ export default function DashboardPanel() {
         </p>
       )}
 
+      {d.issues && (
+        <>
+          <div className="sec-h" style={{ margin: "14px 0 8px", display: "flex", justifyContent: "space-between" }}>
+            <span>Issues</span>
+            <Link href="/issues" style={{ color: "var(--accent)", fontWeight: 500 }}>Open Issues</Link>
+          </div>
+          <div className="kpis">
+            <div className="kpi static">
+              <span className="kl">Pending</span>
+              <span className="kv">{d.issues.pending}</span>
+              <span className="kd">{d.issues.it} IT · {d.issues.erp} ERP</span>
+            </div>
+            <div className="kpi static">
+              <span className="kl">High / Critical</span>
+              <span className="kv" style={d.issues.urgent ? { color: "var(--bad)" } : undefined}>{d.issues.urgent}</span>
+              <span className="kd">pending and urgent</span>
+            </div>
+            <div className="kpi static">
+              <span className="kl">Unassigned</span>
+              <span className="kv">{d.issues.unassigned}</span>
+              <span className="kd">no owner yet</span>
+            </div>
+            <div className="kpi static">
+              <span className="kl">Solved · {label.toLowerCase()}</span>
+              <span className="kv">{d.issues.solved}</span>
+              <span className="kd">resolved or closed</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {d.mom && (
+        <>
+          <div className="sec-h" style={{ margin: "14px 0 8px", display: "flex", justifyContent: "space-between" }}>
+            <span>MOM points</span>
+            <Link href="/mom" style={{ color: "var(--accent)", fontWeight: 500 }}>Open MOM</Link>
+          </div>
+          <div className="kpis">
+            <div className="kpi static">
+              <span className="kl">Pending</span>
+              <span className="kv">{d.mom.pending}</span>
+              <span className="kd">{d.mom.unassigned} unassigned</span>
+            </div>
+            <div className="kpi static">
+              <span className="kl">Overdue</span>
+              <span className="kv" style={d.mom.overdue ? { color: "var(--bad)" } : undefined}>{d.mom.overdue}</span>
+              <span className="kd">{d.mom.due_today} due today</span>
+            </div>
+            <div className="kpi static">
+              <span className="kl">Done</span>
+              <span className="kv">{d.mom.done}</span>
+              <span className="kd">of {d.mom.total} points</span>
+            </div>
+            <div className="kpi static">
+              <span className="kl">Completion</span>
+              <span className="kv">{pctText(d.mom.done_pct)}</span>
+              <span className="kd">all points to date</span>
+            </div>
+          </div>
+        </>
+      )}
+
       <details className="more">
         <summary>Trend and team</summary>
       <div className="two" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", marginTop: 10 }}>
@@ -109,7 +175,7 @@ export default function DashboardPanel() {
         <div className="card tw">
           <table className="tbl">
             <thead>
-              <tr><th>Person</th><th>Pending</th><th>Overdue</th><th>Solved</th><th>On time</th></tr>
+              <tr><th>Person</th><th>Tickets pending</th><th>Overdue</th><th>Solved</th><th>On time</th><th>Issues</th><th>MOM</th></tr>
             </thead>
             <tbody>
               {d.people.map((p) => (
@@ -119,6 +185,8 @@ export default function DashboardPanel() {
                   <td style={p.overdue ? { color: "var(--bad)", fontWeight: 650 } : undefined}>{p.overdue}</td>
                   <td>{p.solved}</td>
                   <td>{pctText(p.on_time_pct)}</td>
+                  <td>{p.issues}</td>
+                  <td style={p.mom_overdue ? { color: "var(--bad)", fontWeight: 650 } : undefined}>{p.mom}{p.mom_overdue ? ` (${p.mom_overdue} overdue)` : ""}</td>
                 </tr>
               ))}
             </tbody>

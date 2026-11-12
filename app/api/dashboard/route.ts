@@ -92,7 +92,57 @@ export async function GET(req: NextRequest) {
     }
 
     const n = (v: any) => Number(v ?? 0);
+
+    // Issues and MOM points: each is skipped (null) if its table has not been created yet, so the overview never breaks.
+    const IIST = "DATEADD(minute, 330, i.resolved_at)";
+    let issues: any = null;
+    try {
+      const [a] = await query<any>(
+        `SELECT COUNT(*) AS total,
+                ISNULL(SUM(CASE WHEN i.type='IT' THEN 1 ELSE 0 END),0) AS it,
+                ISNULL(SUM(CASE WHEN i.type='ERP' THEN 1 ELSE 0 END),0) AS erp,
+                ISNULL(SUM(CASE WHEN i.assigned_to IS NULL THEN 1 ELSE 0 END),0) AS unassigned,
+                ISNULL(SUM(CASE WHEN i.priority IN ('High','Critical') THEN 1 ELSE 0 END),0) AS urgent
+           FROM dbo.issues i WHERE i.status NOT IN ('Resolved','Closed')`
+      );
+      const [b] = await query<any>(
+        `SELECT COUNT(*) AS solved FROM dbo.issues i
+          WHERE i.resolved_at IS NOT NULL AND i.status IN ('Resolved','Closed') AND CAST(${IIST} AS date) >= CAST(@from AS date)`,
+        { from }
+      );
+      issues = { pending: n(a.total), it: n(a.it), erp: n(a.erp), unassigned: n(a.unassigned), urgent: n(a.urgent), solved: n(b.solved) };
+    } catch {}
+    let mom: any = null;
+    try {
+      const [m1] = await query<any>(
+        `SELECT COUNT(*) AS total,
+                ISNULL(SUM(CASE WHEN status <> 'Done' THEN 1 ELSE 0 END),0) AS pending,
+                ISNULL(SUM(CASE WHEN status <> 'Done' AND target_date < CAST(@today AS date) THEN 1 ELSE 0 END),0) AS overdue,
+                ISNULL(SUM(CASE WHEN status <> 'Done' AND target_date = CAST(@today AS date) THEN 1 ELSE 0 END),0) AS due_today,
+                ISNULL(SUM(CASE WHEN status <> 'Done' AND assigned_to IS NULL THEN 1 ELSE 0 END),0) AS unassigned,
+                ISNULL(SUM(CASE WHEN status = 'Done' THEN 1 ELSE 0 END),0) AS done
+           FROM dbo.mom_points`,
+        { today }
+      );
+      mom = { total: n(m1.total), pending: n(m1.pending), overdue: n(m1.overdue), due_today: n(m1.due_today), unassigned: n(m1.unassigned), done: n(m1.done), done_pct: pct(n(m1.done), n(m1.total)) };
+    } catch {}
+    // per-person pending issues / MOM points
+    const extra = new Map<string, { issues: number; mom: number; mom_overdue: number }>();
+    for (const p of people) extra.set(p.id, { issues: 0, mom: 0, mom_overdue: 0 });
+    try {
+      for (const r of await query<any>(`SELECT assigned_to AS id, COUNT(*) AS c FROM dbo.issues WHERE assigned_to IS NOT NULL AND status NOT IN ('Resolved','Closed') GROUP BY assigned_to`))
+        if (extra.has(r.id)) extra.get(r.id)!.issues = n(r.c);
+    } catch {}
+    try {
+      for (const r of await query<any>(
+        `SELECT assigned_to AS id, COUNT(*) AS c, SUM(CASE WHEN target_date < CAST(@today AS date) THEN 1 ELSE 0 END) AS od
+           FROM dbo.mom_points WHERE assigned_to IS NOT NULL AND status <> 'Done' GROUP BY assigned_to`, { today }))
+        if (extra.has(r.id)) Object.assign(extra.get(r.id)!, { mom: n(r.c), mom_overdue: n(r.od) });
+    } catch {}
+
     return {
+      issues,
+      mom,
       period,
       from,
       pending: { total: n(pending.total), overdue: n(pending.overdue), due_today: n(pending.due_today), no_target: n(pending.no_target), unassigned: n(pending.unassigned), it: n(pending.it), erp: n(pending.erp) },
@@ -107,6 +157,7 @@ export async function GET(req: NextRequest) {
         id: p.id, name: p.full_name || p.login_id,
         pending: n(p.pending), overdue: n(p.overdue), solved: n(p.solved),
         on_time_pct: pct(n(p.on_time), n(p.with_target)), with_target: n(p.with_target),
+        issues: extra.get(p.id)?.issues ?? 0, mom: extra.get(p.id)?.mom ?? 0, mom_overdue: extra.get(p.id)?.mom_overdue ?? 0,
       })),
       trend,
     };

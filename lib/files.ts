@@ -69,3 +69,11 @@ export async function readStored(ticketId: string, storedName: string) {
 export function formFiles(form: FormData): File[] {
   return form.getAll("files").filter((f): f is File => typeof f !== "string" && f.size > 0);
 }
+
+/** Remove a ticket's screenshots from disk (used when an admin deletes the ticket). Missing folder is fine. */
+export async function removeTicketFiles(ticketId: string) {
+  const base = uploadDir();
+  const dir = path.resolve(base, ticketId);
+  if (!dir.startsWith(base + path.sep)) return;
+  await fs.rm(dir, { recursive: true, force: true });
+}

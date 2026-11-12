@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
-import { query } from "@/lib/db";
+import { isGuid, query } from "@/lib/db";
 import { PRIORITIES, STATUSES } from "@/lib/constants";
 import { handle, HttpError } from "@/lib/http";
-import { getIssue, listStaff, logIssueEvent, parseClosedOn, requireStaff } from "@/lib/server";
+import { getIssue, listStaff, logIssueEvent, parseClosedOn, requireAdmin, requireStaff } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,6 +97,28 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         await logIssueEvent(issue.id, me.id, "edited", "Title or description changed");
       }
     }
+    return { ok: true };
+  });
+}
+
+/** Admin only: permanently delete an issue with its notes, history and ticket links (the tickets stay). */
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  return handle(async () => {
+    const { id } = await ctx.params;
+    await requireAdmin(req);
+    if (!isGuid(id)) throw new HttpError(404, "Not found");
+    const [i] = await query("SELECT id FROM dbo.issues WHERE id=@id", { id });
+    if (!i) throw new HttpError(404, "Not found");
+    await query(
+      `SET XACT_ABORT ON;
+       BEGIN TRAN;
+         DELETE FROM dbo.issue_comments WHERE issue_id=@id;
+         DELETE FROM dbo.issue_events   WHERE issue_id=@id;
+         DELETE FROM dbo.issue_tickets  WHERE issue_id=@id;
+         DELETE FROM dbo.issues WHERE id=@id;
+       COMMIT;`,
+      { id }
+    );
     return { ok: true };
   });
 }

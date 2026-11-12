@@ -231,3 +231,8 @@ node --env-file=.env.local scripts\import-users.js
 ```
 
 The first command only shows what it would do. The second adds everyone as a normal user with the temporary password `Admin@123`; each person must choose their own password at first sign-in (it is a TicketDesk password, not the ERP one). Existing user IDs are skipped. Use `--password "Other@123"` for a different temporary password. Set the IT team's roles afterwards on the Users page.
+
+## Deleting (admin only) and the Overview
+
+- Admins see a **Delete ticket** button (Manage panel on the ticket page) and a **Delete issue** button (issue page), each with a confirmation. Deleting is permanent: a ticket takes its replies, screenshots and history with it; an issue takes its notes and history (linked tickets stay). MOM points already had Delete. No SQL change needed.
+- The **Overview** now has three blocks: Tickets, Issues and MOM points (pending, urgent/overdue, unassigned, solved/done), plus Issues and MOM columns in the team table under "Trend and team".

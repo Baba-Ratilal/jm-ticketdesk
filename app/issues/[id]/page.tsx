@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import AppShell from "@/components/AppShell";
+import AppShell, { useProfile } from "@/components/AppShell";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
@@ -17,6 +17,8 @@ type Detail = { issue: Issue; comments: Comment[]; events: EventRow[]; tickets: 
 
 function IssueView() {
   const { id } = useParams<{ id: string }>();
+  const me = useProfile()!;
+  const router = useRouter();
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -42,6 +44,16 @@ function IssueView() {
     try {
       await api(`/api/issues/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
       load();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  async function removeIssue() {
+    if (!confirm("Delete this issue for good? Its notes and history are deleted too (linked tickets stay). This cannot be undone.")) return;
+    try {
+      await api(`/api/issues/${id}`, { method: "DELETE" });
+      router.replace("/issues");
     } catch (e: any) {
       alert(e.message);
     }
@@ -189,6 +201,11 @@ function IssueView() {
             </div>
             {issue.erp_module && (
               <div className="row"><span>ERP module</span><b>{issue.erp_module}</b></div>
+            )}
+            {me.role === "admin" && (
+              <button type="button" className="btn" style={{ color: "var(--bad)" }} onClick={removeIssue}>
+                Delete issue
+              </button>
             )}
           </div>
 
