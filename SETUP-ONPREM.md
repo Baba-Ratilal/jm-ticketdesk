@@ -236,3 +236,13 @@ The first command only shows what it would do. The second adds everyone as a nor
 
 - Admins see a **Delete ticket** button (Manage panel on the ticket page) and a **Delete issue** button (issue page), each with a confirmation. Deleting is permanent: a ticket takes its replies, screenshots and history with it; an issue takes its notes and history (linked tickets stay). MOM points already had Delete. No SQL change needed.
 - The **Overview** now has three blocks: Tickets, Issues and MOM points (pending, urgent/overdue, unassigned, solved/done), plus Issues and MOM columns in the team table under "Trend and team".
+
+## Device requests (form IT/MOB/01)
+
+1. In SSMS run `deploy\upgrade-device-requests.sql` once, then update the app. It creates 5 tables; nothing else changes.
+2. Admin: open **Device requests** and set the **HR approver** and **Management approver** (used for every new request).
+3. Anyone can raise a request: up to 10 employees, each with unit, department, designation, mobile type, SIM, laptop / PC, accessories and purpose. The requester picks the Department Head.
+4. Approval goes Department Head → HR → Management. Each approver sees "waiting for your approval" on the list and approves or rejects (reject needs a reason). An approver can attach an image of their approval.
+5. If someone approves outside the app (signed paper form, WhatsApp), an admin can record it on their behalf, and **must attach an image** of that approval. The page shows who recorded it.
+6. After full approval the IT team enters the asset tag / serial no. and issued-on date for each row. When every row is issued the request becomes Issued.
+7. **Print / Save as PDF** on the request page prints the form with its approvals. Admin can delete a request. Approval images are stored in the uploads folder under `device\`.

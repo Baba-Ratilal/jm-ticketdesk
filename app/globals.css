@@ -307,3 +307,12 @@ kbd { font-family: var(--font-mono); font-size: 11.5px; background: var(--surfac
 @media (max-width: 900px) { .two[style] { grid-template-columns: minmax(0, 1fr) !important; } }
 .more { margin-bottom: 14px; }
 .more > summary { cursor: pointer; font-weight: 650; color: var(--fg-2); padding: 4px 2px; }
+
+/* Printing a device requirement form: only the form, on white */
+@media print {
+  .side, .mtop, .noprint { display: none !important; }
+  .app { display: block; }
+  .main { padding: 0; max-width: none; }
+  body { background: #fff; }
+  .card { box-shadow: none; break-inside: avoid; }
+}
