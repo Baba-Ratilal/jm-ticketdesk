@@ -5,6 +5,7 @@ import { isGuid, query } from "@/lib/db";
 import { getDeviceRequest, logDeviceEvent, storeProof } from "@/lib/device-server";
 import { prepareFiles, uploadDir } from "@/lib/files";
 import { STAGES } from "@/lib/device";
+import { mailNextApprover, mailOutcome } from "@/lib/device-mail";
 import { handle, HttpError } from "@/lib/http";
 import { parseRaisedOn, requireAdmin, requireUser } from "@/lib/server";
 
@@ -69,6 +70,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         id, me.id, reject ? "rejected" : "approved",
         `${label}${onBehalf ? ` (on behalf of ${cur.approver_name})` : ""}${prepared ? " · proof attached" : ""}${remark ? `: ${remark}` : ""}`
       );
+      if (next === "Approved" || next === "Rejected") await mailOutcome(id);
+      else await mailNextApprover(id);
       return { ok: true };
     }
 

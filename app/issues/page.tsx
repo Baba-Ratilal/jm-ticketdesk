@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import AppShell from "@/components/AppShell";
+import AppShell, { useProfile } from "@/components/AppShell";
+import BulkBar from "@/components/BulkBar";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/Badges";
 import Icon from "@/components/Icon";
 import Kanban from "@/components/Kanban";
@@ -13,6 +14,7 @@ type Staff = { id: string; full_name: string | null; login_id: string | null };
 const DONE_DAYS = 30;
 
 function Issues() {
+  const isAdmin = useProfile()?.role === "admin";
   const [issues, setIssues] = useState<Issue[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +87,8 @@ function Issues() {
           <Link href="/issues/new" className="btn pri">+ New issue</Link>
         </div>
       </div>
+
+      <BulkBar kind="issues" label="issues" isAdmin={isAdmin} onImported={load} />
 
       <div className="tools">
         <div className="search">

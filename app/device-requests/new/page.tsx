@@ -127,7 +127,7 @@ function NewRequest() {
           </div>
           <label>Laptop / PC (type and specs, or leave blank)<input className="in" maxLength={300} value={r.laptop_pc} onChange={(e) => set(i, { laptop_pc: e.target.value })} /></label>
           <label>Accessories / other device (mouse, keyboard, etc.)<input className="in" maxLength={300} value={r.accessories} onChange={(e) => set(i, { accessories: e.target.value })} /></label>
-          <label>Purpose / business justification<textarea className="in" required maxLength={500} value={r.purpose} onChange={(e) => set(i, { purpose: e.target.value })} /></label>
+          <label>Purpose / business justification <b style={{ color: "var(--bad, #dc2626)" }} aria-hidden="true">*</b> <span className="fine">(required)</span><textarea className="in" required minLength={5} maxLength={500} placeholder="Why does this person need the device?" value={r.purpose} onChange={(e) => set(i, { purpose: e.target.value })} /></label>
         </div>
       ))}
 

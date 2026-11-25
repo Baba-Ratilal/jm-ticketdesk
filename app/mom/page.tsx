@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import BulkBar from "@/components/BulkBar";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { fmtDay, todayStr } from "@/lib/constants";
@@ -92,6 +93,8 @@ function Mom() {
         </div>
         {canEdit && <button className="btn pri" onClick={() => { setAdding(!adding); setAdd(blank()); setSaveErr(""); }}>{adding ? "Close" : "+ Add point"}</button>}
       </div>
+
+      <BulkBar kind="mom" label="points" isAdmin={canEdit} onImported={load} />
 
       {canEdit && adding && (
         <form

@@ -255,3 +255,12 @@ The first command only shows what it would do. The second adds everyone as a nor
 - Renaming a value also updates existing tickets, issues and users that use it. Switching off hides it from new forms only.
 - The designations seeded are generic (Director … Helper). Edit them to match JM's real titles.
 - **Users** page: set unit, department and designation per user, edit the name, and choose them when adding a user. Names of ERP-source users may be overwritten if the ERP sync is later enabled.
+
+## Tickets tab, Excel export / import, approval emails
+
+No SQL script is needed for this version.
+
+- **Overview** now shows only the KPIs; **Tickets**, **Issues** and **MOM** are separate tabs with the list / board and filters.
+- **Export to Excel** (IT team + admins) on Tickets, Issues and MOM downloads everything (IT-team members get their own queue plus unassigned tickets).
+- **Import from Excel** (admins): click **Import template**, fill it, then **Import from Excel**. The file is checked first; if any row is wrong nothing is imported and every problem is listed with its row number. Imported tickets/issues use the Raised Date and Closed Date from the file; "Raised By" defaults to the admin doing the import. Users, units, departments, categories and ERP modules must already exist (Users / Masters).
+- **Device requests — approval emails:** the approver whose turn it is gets an email with the request and a *Review & decide* link: Department Head → HR → Management. The requester is mailed on rejection or full approval, and the IT team is mailed to issue the devices. This uses the same `MS_*` / `MS_SENDER` mail settings as the daily digest; without them nothing is sent and the request history says so. **Each approver needs an email address** — admins can now set it for every user on the Users page. Purpose is required for every employee row.

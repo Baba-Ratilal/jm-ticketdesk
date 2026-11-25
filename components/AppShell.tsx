@@ -48,6 +48,7 @@ export default function AppShell({
     { href: "/", label: "My tickets", icon: "tickets" },
     { href: "/tickets/new", label: "New ticket", icon: "plus" },
     ...(isStaff ? [{ href: "/admin", label: "Overview", icon: "chart" }] : []),
+    ...(isStaff ? [{ href: "/tickets", label: "Tickets", icon: "tickets" }] : []),
     ...(isStaff ? [{ href: "/work", label: "My work", icon: "check" }] : []),
     ...(isStaff ? [{ href: "/issues", label: "Issues", icon: "issues" }] : []),
     ...(isStaff ? [{ href: "/mom", label: "MOM", icon: "mom" }] : []),
@@ -55,7 +56,12 @@ export default function AppShell({
     ...(isAdmin ? [{ href: "/admin/masters", label: "Masters", icon: "masters" }] : []),
     ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
   ];
-  const isOn = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
+  const isOn = (href: string) =>
+    href === "/" ? path === "/"
+    : href === "/tickets/new" ? path === href
+    : href === "/tickets" ? path === href || (path.startsWith("/tickets/") && path !== "/tickets/new")
+    : href === "/admin" ? path === href
+    : path === href || path.startsWith(href + "/");
   const initials = (profile.full_name || profile.login_id || profile.email || "?")
     .split(/\s+/)
     .map((w) => w[0])

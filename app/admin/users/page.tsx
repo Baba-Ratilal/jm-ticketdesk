@@ -196,7 +196,7 @@ function Users() {
               <th>Last sign-in</th>
               <th>Role</th>
               <th>Phone</th>
-              <th>Email (for daily digest)</th>
+              <th>Email (mails &amp; approvals)</th>
               <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
@@ -259,21 +259,17 @@ function Users() {
                   )}
                 </td>
                 <td data-l="Email">
-                  {u.role === "user" ? (
-                    <span className="meta">{u.email || "—"}</span>
-                  ) : (
-                    <input
-                      className="in"
-                      type="email"
-                      style={{ padding: "6px 9px", minWidth: 190 }}
-                      aria-label={`Email for ${u.full_name || u.login_id}`}
-                      placeholder="name@company.com"
-                      defaultValue={u.email || ""}
-                      onBlur={(e) => {
-                        if (e.target.value.trim().toLowerCase() !== (u.email || "")) patch(u, { email: e.target.value.trim() });
-                      }}
-                    />
-                  )}
+                  <input
+                    className="in"
+                    type="email"
+                    style={{ padding: "6px 9px", minWidth: 190 }}
+                    aria-label={`Email for ${u.full_name || u.login_id}`}
+                    placeholder="name@company.com"
+                    defaultValue={u.email || ""}
+                    onBlur={(e) => {
+                      if (e.target.value.trim().toLowerCase() !== (u.email || "")) patch(u, { email: e.target.value.trim() });
+                    }}
+                  />
                 </td>
                 <td className="first" style={{ textAlign: "right" }}>
                   <div className="acts end">

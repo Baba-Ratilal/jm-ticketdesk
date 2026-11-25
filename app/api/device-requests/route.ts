@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { isGuid, query } from "@/lib/db";
 import { MAX_ITEMS, MOBILE_TYPES, SIM_OPTIONS } from "@/lib/device";
 import { getDeviceApprovers, logDeviceEvent } from "@/lib/device-server";
+import { mailNextApprover } from "@/lib/device-mail";
 import { handle, HttpError } from "@/lib/http";
 import { requireUser } from "@/lib/server";
 
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       const sim = SIM_OPTIONS.includes(r.sim_required) ? r.sim_required : "N/A";
       const laptop = clean(r.laptop_pc, 300), acc = clean(r.accessories, 300);
       if (name.length < 2) throw new HttpError(400, `Row ${n}: enter the employee name`);
-      if (purpose.length < 3) throw new HttpError(400, `Row ${n}: enter the purpose / business justification`);
+      if (purpose.length < 5) throw new HttpError(400, `Row ${n}: the purpose is required — say why ${name} needs the device (at least 5 characters)`);
       if (mobile === "N/A" && sim !== "Yes" && !laptop && !acc) throw new HttpError(400, `Row ${n}: choose at least one device (mobile, SIM, laptop / PC or accessories)`);
       Object.assign(p, {
         [`n${n}`]: name, [`u${n}`]: clean(r.unit, 100) || null, [`dp${n}`]: clean(r.department, 100) || null, [`ds${n}`]: clean(r.designation, 100) || null,
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
       p
     );
     await logDeviceEvent(row.id, me.id, "submitted", `${rows.length} employee${rows.length === 1 ? "" : "s"}`);
+    await mailNextApprover(row.id);
     return { id: row.id };
   });
 }
