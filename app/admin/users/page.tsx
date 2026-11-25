@@ -5,13 +5,15 @@ import AppShell, { useProfile } from "@/components/AppShell";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { fmtDate, type Profile } from "@/lib/constants";
+import { useMasters } from "@/lib/useMasters";
 
 function Users() {
   const me = useProfile()!;
+  const lists = useMasters();
   const [users, setUsers] = useState<Profile[]>([]);
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ login_id: "", full_name: "", role: "user", phone: "", password: "" });
+  const [form, setForm] = useState({ login_id: "", full_name: "", role: "user", phone: "", password: "", unit: "", department: "", designation: "" });
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [auto, setAuto] = useState<{ IT: string | null; ERP: string | null; staff: { id: string; full_name: string | null; login_id: string | null }[] } | null>(null);
@@ -35,7 +37,7 @@ function Users() {
     }
   }
 
-  async function patch(u: Profile, body: { role?: string; active?: boolean; phone?: string; email?: string }, confirmText?: string) {
+  async function patch(u: Profile, body: { role?: string; active?: boolean; phone?: string; email?: string; full_name?: string; unit?: string; department?: string; designation?: string }, confirmText?: string) {
     if (confirmText && !confirm(confirmText)) return;
     try {
       await api(`/api/users/${u.id}`, { method: "PATCH", body: JSON.stringify(body) });
@@ -52,7 +54,7 @@ function Users() {
     try {
       const r = await api<{ login_id: string; password: string }>("/api/users", { method: "POST", body: JSON.stringify(form) });
       setSecret({ who: form.full_name, loginId: r.login_id, password: r.password });
-      setForm({ login_id: "", full_name: "", role: "user", phone: "", password: "" });
+      setForm({ login_id: "", full_name: "", role: "user", phone: "", password: "", unit: "", department: "", designation: "" });
       setAdding(false);
       load();
     } catch (err: any) {
@@ -81,7 +83,7 @@ function Users() {
         <div>
           <h1>Users</h1>
           <p className="sub">
-            {users.length} people · IT-team members work on assigned tickets; admins manage everything. Add a phone number for each IT-team member so requesters can call them.
+            {users.length} people · <a href="/admin/masters">Manage units, departments &amp; other lists</a> · IT-team members work on assigned tickets; admins manage everything. Add a phone number for each IT-team member so requesters can call them.
           </p>
         </div>
         <button className="btn pri" onClick={() => { setAdding(!adding); setFormError(""); }}>
@@ -152,6 +154,27 @@ function Users() {
               <label className="lbl" htmlFor="n_phone">Phone (optional)</label>
               <input className="in" id="n_phone" placeholder="+91 …" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
+            <div>
+              <label className="lbl" htmlFor="n_unit">Unit</label>
+              <select className="in sel" id="n_unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
+                <option value="">—</option>
+                {lists.unit.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="lbl" htmlFor="n_department">Department</label>
+              <select className="in sel" id="n_department" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}>
+                <option value="">—</option>
+                {lists.department.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="lbl" htmlFor="n_designation">Designation</label>
+              <select className="in sel" id="n_designation" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })}>
+                <option value="">—</option>
+                {lists.designation.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </div>
           </div>
           <div>
             <label className="lbl" htmlFor="n_pw">Default password</label>
@@ -169,7 +192,7 @@ function Users() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Unit / Dept</th>
+              <th>Unit / Dept / Designation</th>
               <th>Last sign-in</th>
               <th>Role</th>
               <th>Phone</th>
@@ -181,14 +204,27 @@ function Users() {
             {shown.map((u) => (
               <tr key={u.id} style={u.active === false ? { opacity: 0.55 } : undefined}>
                 <td className="first">
-                  <div className="nm">{u.full_name}</div>
+                  <div className="nm">{u.full_name}{u.designation ? <span className="meta"> · {u.designation}</span> : null}</div>
                   <div className="meta">
                     {[u.login_id, u.email].filter(Boolean).join(" · ")}
                     {u.source === "erp" && " · ERP"}
                     {u.must_change_password && <span className="pill warn" style={{ marginLeft: 6 }}>must change password</span>}
                   </div>
                 </td>
-                <td data-l="Unit / Dept">{[u.unit, u.department].filter(Boolean).join(" · ") || "—"}</td>
+                <td data-l="Unit / Dept">
+                  <div style={{ display: "grid", gap: 4, minWidth: 150 }}>
+                    {([["unit", "Unit", lists.unit], ["department", "Department", lists.department], ["designation", "Designation", lists.designation]] as const).map(([k, l, opts]) => {
+                      const cur = (u as any)[k] as string | null;
+                      return (
+                        <select key={k} className="in sel" style={{ padding: "5px 8px" }} aria-label={`${l} for ${u.full_name || u.login_id}`} value={cur || ""} onChange={(e) => e.target.value && patch(u, { [k]: e.target.value })}>
+                          <option value="">{l}: —</option>
+                          {cur && !opts.includes(cur) && <option>{cur}</option>}
+                          {opts.map((x) => <option key={x}>{x}</option>)}
+                        </select>
+                      );
+                    })}
+                  </div>
+                </td>
                 <td data-l="Last sign-in">{u.last_login ? fmtDate(u.last_login) : "—"}</td>
                 <td data-l="Role">
                   <select
@@ -241,6 +277,15 @@ function Users() {
                 </td>
                 <td className="first" style={{ textAlign: "right" }}>
                   <div className="acts end">
+                    <button
+                      className="btn sm"
+                      onClick={() => {
+                        const v = prompt("Full name:", u.full_name || "");
+                        if (v && v.trim() && v.trim() !== u.full_name) patch(u, { full_name: v.trim() });
+                      }}
+                    >
+                      Edit name
+                    </button>
                     {u.source !== "erp" && (
                       <button className="btn sm" onClick={() => resetPassword(u)}>
                         Reset password

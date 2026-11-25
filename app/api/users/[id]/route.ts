@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { isGuid, query } from "@/lib/db";
 import { handle, HttpError } from "@/lib/http";
+import { getMasterLists } from "@/lib/masters";
 import { hashPassword } from "@/lib/password";
 import { generatePassword, passwordProblem } from "@/lib/policy";
 import { requireAdmin } from "@/lib/server";
@@ -60,6 +61,24 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       newEmail = e || null;
     }
 
+    // master details: name, unit, department, designation (values come from the Masters lists)
+    const extra: string[] = [];
+    const ep: Record<string, unknown> = {};
+    if (body.full_name !== undefined) {
+      const n = String(body.full_name).trim().replace(/\s+/g, " ").slice(0, 200);
+      if (n.length < 2) throw new HttpError(400, "Enter the person's name");
+      extra.push("full_name=@fn"); ep.fn = n;
+    }
+    if (body.unit !== undefined || body.department !== undefined || body.designation !== undefined) {
+      const lists = await getMasterLists();
+      for (const [field, list, what] of [["unit", lists.unit, "unit"], ["department", lists.department, "department"], ["designation", lists.designation, "designation"]] as const) {
+        if (body[field] === undefined) continue;
+        const v = String(body[field] ?? "").trim();
+        if (v && !list.includes(v)) throw new HttpError(400, `Choose the ${what} from the list`);
+        extra.push(`${field}=@${field}`); ep[field] = v || null;
+      }
+    }
+
     // never leave the system without an active admin
     const losesAdmin = u.role === "admin" && u.active && (newRole !== "admin" || !newActive);
     if (losesAdmin) {
@@ -70,7 +89,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       if (n < 1) throw new HttpError(400, "There must be at least one active admin");
     }
 
-    await query("UPDATE dbo.users SET role=@role, active=@active, phone=@phone, email=@email WHERE id=@id", {
+    await query(`UPDATE dbo.users SET role=@role, active=@active, phone=@phone, email=@email${extra.map((e) => ", " + e).join("")} WHERE id=@id`, {
+      ...ep,
       phone: newPhone,
       email: newEmail,
       role: newRole,

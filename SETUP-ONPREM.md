@@ -246,3 +246,12 @@ The first command only shows what it would do. The second adds everyone as a nor
 5. If someone approves outside the app (signed paper form, WhatsApp), an admin can record it on their behalf, and **must attach an image** of that approval. The page shows who recorded it.
 6. After full approval the IT team enters the asset tag / serial no. and issued-on date for each row. When every row is issued the request becomes Issued.
 7. **Print / Save as PDF** on the request page prints the form with its approvals. Admin can delete a request. Approval images are stored in the uploads folder under `device\`.
+
+## Masters (admin only)
+
+**Run `deploy\upgrade-masters.sql` in SSMS BEFORE updating the app.** It adds a `designation` column to users, creates `dbo.masters` and fills it with the current lists.
+
+- **Masters** menu (admins): Units, Departments, Designations, IT categories, ERP categories, ERP modules. Add, rename, reorder, switch off or delete values. Ticket, issue, device-request and user forms read these lists.
+- Renaming a value also updates existing tickets, issues and users that use it. Switching off hides it from new forms only.
+- The designations seeded are generic (Director … Helper). Edit them to match JM's real titles.
+- **Users** page: set unit, department and designation per user, edit the name, and choose them when adding a user. Names of ERP-source users may be overwritten if the ERP sync is later enabled.

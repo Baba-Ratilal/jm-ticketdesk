@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { CATEGORIES, DEPARTMENTS, ERP_MODULES, PRIORITIES, UNITS } from "@/lib/constants";
+import { PRIORITIES } from "@/lib/constants";
+import { getMasterLists } from "@/lib/masters";
 import { formFiles, prepareFiles, storeFiles } from "@/lib/files";
 import { handle, HttpError } from "@/lib/http";
 import { notifyInBackground } from "@/lib/notify";
@@ -52,16 +53,17 @@ export async function POST(req: NextRequest) {
 
     const type = d.type;
     if (type !== "IT" && type !== "ERP") throw new HttpError(400, "Choose IT or ERP");
-    if (!CATEGORIES[type].includes(d.category)) throw new HttpError(400, "Invalid category");
+    const lists = await getMasterLists();
+    if (!(type === "IT" ? lists.it_category : lists.erp_category).includes(d.category)) throw new HttpError(400, "Invalid category");
     if (!(PRIORITIES as readonly string[]).includes(d.priority)) throw new HttpError(400, "Invalid priority");
-    if (!UNITS.includes(d.unit) || !DEPARTMENTS.includes(d.department))
+    if (!lists.unit.includes(d.unit) || !lists.department.includes(d.department))
       throw new HttpError(400, "Please select your unit and department");
     const description = clean(d.description, 5000);
     if (description.length < 5) throw new HttpError(400, "Please describe the issue");
     // there is no separate title: it is the first line of the description (used in lists and emails)
     const firstLine = description.split(/\r?\n/).find((l) => l.trim()) || description;
     const title = firstLine.trim().replace(/\s+/g, " ").slice(0, 120);
-    const erpModule = type === "ERP" && ERP_MODULES.includes(d.erp_module) ? d.erp_module : null;
+    const erpModule = type === "ERP" && lists.erp_module.includes(d.erp_module) ? d.erp_module : null;
     const erpScreen = type === "ERP" ? clean(d.erp_screen, 150) || null : null;
 
     const raisedOn = parseRaisedOn(d.raised_on);

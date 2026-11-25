@@ -79,6 +79,7 @@ export type Profile = {
   phone?: string | null;
   unit: string | null;
   department: string | null;
+  designation?: string | null;
   active?: boolean;
   last_login?: string | null;
   source?: "local" | "erp";

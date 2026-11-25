@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
 import { api } from "@/lib/api";
-import { DEPARTMENTS, todayStr, UNITS } from "@/lib/constants";
+import { todayStr } from "@/lib/constants";
+import { useMasters } from "@/lib/useMasters";
 import { MAX_ITEMS, MOBILE_TYPES, SIM_OPTIONS } from "@/lib/device";
 
 type Row = { employee_name: string; unit: string; department: string; designation: string; mobile_type: string; sim_required: string; laptop_pc: string; accessories: string; purpose: string };
@@ -13,6 +14,7 @@ type Approvers = { people: { id: string; full_name: string | null; login_id: str
 
 function NewRequest() {
   const me = useProfile()!;
+  const lists = useMasters();
   const router = useRouter();
   const blank = (): Row => ({
     employee_name: "", unit: me.unit || "", department: me.department || "", designation: "",
@@ -85,19 +87,29 @@ function NewRequest() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
             <label>Employee name<input className="in" required maxLength={150} value={r.employee_name} onChange={(e) => set(i, { employee_name: e.target.value })} /></label>
-            <label>Designation<input className="in" maxLength={100} value={r.designation} onChange={(e) => set(i, { designation: e.target.value })} /></label>
+            <label>
+              Designation
+              {lists.designation.length ? (
+                <select className="in sel" value={r.designation} onChange={(e) => set(i, { designation: e.target.value })}>
+                  <option value="">—</option>
+                  {lists.designation.map((x) => <option key={x}>{x}</option>)}
+                </select>
+              ) : (
+                <input className="in" maxLength={100} value={r.designation} onChange={(e) => set(i, { designation: e.target.value })} />
+              )}
+            </label>
             <label>
               Unit
               <select className="in sel" value={r.unit} onChange={(e) => set(i, { unit: e.target.value })}>
                 <option value="">—</option>
-                {UNITS.map((u) => <option key={u}>{u}</option>)}
+                {lists.unit.map((u) => <option key={u}>{u}</option>)}
               </select>
             </label>
             <label>
               Department
               <select className="in sel" value={r.department} onChange={(e) => set(i, { department: e.target.value })}>
                 <option value="">—</option>
-                {DEPARTMENTS.map((u) => <option key={u}>{u}</option>)}
+                {lists.department.map((u) => <option key={u}>{u}</option>)}
               </select>
             </label>
             <label>

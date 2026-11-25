@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { ERP_MODULES, PRIORITIES } from "@/lib/constants";
+import { PRIORITIES } from "@/lib/constants";
+import { getMasterLists } from "@/lib/masters";
 import { handle, HttpError } from "@/lib/http";
 import { getVisibleTicket, listStaff, logIssueEvent, parseRaisedOn, requireStaff } from "@/lib/server";
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     const description = clean(d.description, 5000);
     const priority = d.priority ?? "Medium";
     if (!(PRIORITIES as readonly string[]).includes(priority)) throw new HttpError(400, "Invalid priority");
-    const erpModule = d.type === "ERP" && ERP_MODULES.includes(d.erp_module) ? d.erp_module : null;
+    const erpModule = d.type === "ERP" && (await getMasterLists()).erp_module.includes(d.erp_module) ? d.erp_module : null;
 
     const raisedOn = parseRaisedOn(d.raised_on);
     let assignee: string | null = null;

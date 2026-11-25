@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import AppShell, { useProfile } from "@/components/AppShell";
 import ScreenshotPicker from "@/components/ScreenshotPicker";
 import { api } from "@/lib/api";
-import { CATEGORIES, todayStr, DEPARTMENTS, ERP_MODULES, PRIORITIES, UNITS } from "@/lib/constants";
+import { todayStr, PRIORITIES } from "@/lib/constants";
+import { useMasters } from "@/lib/useMasters";
 
 function Form() {
   const router = useRouter();
   const profile = useProfile()!;
+  const lists = useMasters();
   const [type, setType] = useState<"IT" | "ERP">("IT");
-  const [category, setCategory] = useState(CATEGORIES.IT[0]);
+  const cats = type === "IT" ? lists.it_category : lists.erp_category;
+  const [category, setCategory] = useState("");
   const [priority, setPriority] = useState<string>("Medium");
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState(profile.unit || "");
@@ -24,8 +27,8 @@ function Form() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setCategory(CATEGORIES[type][0]);
-  }, [type]);
+    setCategory((c) => (cats.includes(c) ? c : cats[0] || ""));
+  }, [type, lists]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,7 +87,7 @@ function Form() {
           <div className="fld">
             <label className="lbl" htmlFor="f_cat">Category</label>
             <select id="f_cat" className="in" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORIES[type].map((c) => (
+              {cats.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
@@ -101,7 +104,7 @@ function Form() {
             <label className="lbl" htmlFor="f_unit">Unit</label>
             <select id="f_unit" className="in" value={unit} onChange={(e) => setUnit(e.target.value)}>
               <option value="">Select unit</option>
-              {UNITS.map((u) => (
+              {lists.unit.map((u) => (
                 <option key={u}>{u}</option>
               ))}
             </select>
@@ -110,7 +113,7 @@ function Form() {
             <label className="lbl" htmlFor="f_dep">Department</label>
             <select id="f_dep" className="in" value={department} onChange={(e) => setDepartment(e.target.value)}>
               <option value="">Select department</option>
-              {DEPARTMENTS.map((d) => (
+              {lists.department.map((d) => (
                 <option key={d}>{d}</option>
               ))}
             </select>
@@ -123,7 +126,7 @@ function Form() {
               <label className="lbl" htmlFor="f_mod">ERP module</label>
               <select id="f_mod" className="in" value={erpModule} onChange={(e) => setErpModule(e.target.value)}>
                 <option value="">Select module</option>
-                {ERP_MODULES.map((m) => (
+                {lists.erp_module.map((m) => (
                   <option key={m}>{m}</option>
                 ))}
               </select>

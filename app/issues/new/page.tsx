@@ -6,13 +6,15 @@ import { Suspense, useEffect, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
-import { ERP_MODULES, todayStr, PRIORITIES, type Ticket } from "@/lib/constants";
+import { todayStr, PRIORITIES, type Ticket } from "@/lib/constants";
+import { useMasters } from "@/lib/useMasters";
 
 type Staff = { id: string; full_name: string | null; login_id: string | null };
 
 function NewIssue() {
   const router = useRouter();
   const me = useProfile()!;
+  const lists = useMasters();
   const ticketId = useSearchParams().get("ticket");
   const [staff, setStaff] = useState<Staff[]>([]);
   const [f, setF] = useState({ type: "IT", title: "", description: "", priority: "Medium", erp_module: "", assigned_to: "", raised_on: todayStr() });
@@ -79,7 +81,7 @@ function NewIssue() {
               <label className="lbl" htmlFor="i_mod">ERP module</label>
               <select id="i_mod" className="in sel" value={f.erp_module} onChange={(e) => setF({ ...f, erp_module: e.target.value })}>
                 <option value="">—</option>
-                {ERP_MODULES.map((m) => <option key={m}>{m}</option>)}
+                {lists.erp_module.map((m) => <option key={m}>{m}</option>)}
               </select>
             </div>
           )}

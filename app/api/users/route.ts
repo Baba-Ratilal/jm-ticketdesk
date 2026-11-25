@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { handle, HttpError } from "@/lib/http";
 import { hashPassword } from "@/lib/password";
 import { generatePassword, LOGIN_ID_RE, passwordProblem } from "@/lib/policy";
+import { getMasterLists } from "@/lib/masters";
 import { requireAdmin } from "@/lib/server";
 
 export const runtime = "nodejs";
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   return handle(async () => {
     await requireAdmin(req);
     const users = await query(
-      "SELECT id, login_id, email, source, full_name, role, phone, unit, department, active, last_login, must_change_password FROM dbo.users ORDER BY full_name"
+      "SELECT id, login_id, email, source, full_name, role, phone, unit, department, designation, active, last_login, must_change_password FROM dbo.users ORDER BY full_name"
     );
     return { users };
   });
@@ -44,14 +45,24 @@ export async function POST(req: NextRequest) {
       if (problem) throw new HttpError(400, problem);
     }
 
+    const lists = await getMasterLists();
+    const pick = (v: unknown, list: string[], what: string) => {
+      const s = String(v ?? "").trim();
+      if (s && !list.includes(s)) throw new HttpError(400, `Choose the ${what} from the list`);
+      return s || null;
+    };
+    const unit = pick(b.unit, lists.unit, "unit");
+    const department = pick(b.department, lists.department, "department");
+    const designation = pick(b.designation, lists.designation, "designation");
+
     const [dup] = await query("SELECT id FROM dbo.users WHERE login_id=@l", { l: loginId });
     if (dup) throw new HttpError(409, "That user ID already exists.");
 
     const [row] = await query<{ id: string }>(
-      `INSERT INTO dbo.users (login_id, full_name, role, phone, source, password_hash, must_change_password)
+      `INSERT INTO dbo.users (login_id, full_name, role, phone, unit, department, designation, source, password_hash, must_change_password)
        OUTPUT INSERTED.id
-       VALUES (@l, @n, @r, @p, 'local', @h, 1)`,
-      { l: loginId, n: fullName, r: role, p: phone || null, h: await hashPassword(password) }
+       VALUES (@l, @n, @r, @p, @u, @d, @g, 'local', @h, 1)`,
+      { l: loginId, n: fullName, r: role, p: phone || null, u: unit, d: department, g: designation, h: await hashPassword(password) }
     );
     return { id: row.id, login_id: loginId, password };
   });
