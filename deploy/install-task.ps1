@@ -19,4 +19,4 @@ Register-ScheduledTask -TaskName "TicketDesk" -Action $action -Trigger $trigger 
 
 Start-ScheduledTask -TaskName "TicketDesk"
 Write-Host "TicketDesk registered and started. Logs: $appDir\logs\app.log"
-Write-Host "Check:  Invoke-WebRequest http://127.0.0.1:3100/login -UseBasicParsing | Select StatusCode"
+Write-Host "Check:  Invoke-WebRequest http://127.0.0.1:3000/login -UseBasicParsing | Select StatusCode"

@@ -33,8 +33,8 @@ function Build-And-Start {
 $old = (git rev-parse HEAD).Trim()
 
 Stop-ScheduledTask -TaskName "TicketDesk" -ErrorAction SilentlyContinue
-# make sure nothing is still listening on TicketDesk's port (3100)
-Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue |
+# make sure nothing is still listening on TicketDesk's port (3000)
+Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue |
     ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
 
 try {

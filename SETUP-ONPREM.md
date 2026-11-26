@@ -2,7 +2,7 @@
 
 This version runs entirely on your own server: **SQL Server** for data (signing in with **Windows authentication**, so no SQL password exists), a **folder** for screenshots, **ERP user ID + password** for login (the user list is copied from the ERP's Oracle database every night at 12 AM), and optionally **Outlook (Microsoft Graph)** for email alerts.
 
-It is built to live **beside** the HRMS without touching it: its own database, its own access rights (only that database), and its own port (3100). IIS in front is optional and provides HTTPS.
+It is built to live **beside** the HRMS without touching it: its own database, its own access rights (only that database), and its own port (3000). IIS in front is optional and provides HTTPS.
 
 Plan for ~2–3 hours the first time, outside working hours.
 
@@ -50,7 +50,7 @@ At entra.microsoft.com → *App registrations* → **New registration**:
 
 Because nobody signs in through Microsoft any more, there are two ways to reach the site:
 
-- **Simple (inside the office network only):** `http://<server IP>:3100`. Set `NEXTAUTH_URL` to exactly that. The app must then listen on the network, not only on the server itself: edit `deploy\start.cmd` and change `-H 127.0.0.1` to `-H 0.0.0.0`, and allow TCP 3100 in Windows Firewall for the **private/domain** profile only. **Caution:** passwords then travel unencrypted across the office network. Acceptable for a trial; use HTTPS before everyone starts using it.
+- **Simple (inside the office network only):** `http://<server IP>:3000`. Set `NEXTAUTH_URL` to exactly that. The app must then listen on the network, not only on the server itself: edit `deploy\start.cmd` and `start.cmd` now listens on `0.0.0.0` already; allow TCP 3000 in Windows Firewall for the **private/domain** profile only. **Caution:** passwords then travel unencrypted across the office network. Acceptable for a trial; use HTTPS before everyone starts using it.
 - **Recommended: HTTPS name through IIS.** See `NOTE-FOR-IT-VENDOR.md` (an internal DNS name and a certificate, nothing public). Result: `https://helpdesk.<your domain>` opens on office PCs with a valid padlock, and `NEXTAUTH_URL` is that address. (The "Capture screen" button only works over HTTPS.)
 
 ## 5. Install the app
@@ -64,7 +64,7 @@ Because nobody signs in through Microsoft any more, there are two ways to reach 
    npm run build
    .\deploy\install-task.ps1
    ```
-   Check it is alive: `Invoke-WebRequest http://127.0.0.1:3100/login -UseBasicParsing | Select StatusCode` → 200.
+   Check it is alive: `Invoke-WebRequest http://127.0.0.1:3000/login -UseBasicParsing | Select StatusCode` → 200.
 
 ## 6. IIS site
 
