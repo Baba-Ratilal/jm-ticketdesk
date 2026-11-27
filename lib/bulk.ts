@@ -3,11 +3,13 @@ import ExcelJS from "exceljs";
 import { query } from "./db";
 import { PRIORITIES, STATUSES } from "./constants";
 import { MOM_STATUSES } from "./mom";
+import { TASK_STATUSES } from "./tasks";
 import { getMasterLists } from "./masters";
 import { HttpError } from "./http";
+import { TEAM_CTE, TEAM_OPT } from "./tasks-server";
 
-export type BulkKind = "tickets" | "issues" | "mom";
-export const BULK_KINDS: BulkKind[] = ["tickets", "issues", "mom"];
+export type BulkKind = "tickets" | "issues" | "mom" | "tasks" | "managers";
+export const BULK_KINDS: BulkKind[] = ["tickets", "issues", "mom", "tasks", "managers"];
 export const MAX_IMPORT_ROWS = 2000;
 
 type Col = { h: string; w: number };
@@ -25,9 +27,16 @@ const COLS: Record<BulkKind, Col[]> = {
     { h: "Sr No", w: 8 }, { h: "MOM Date", w: 13 }, { h: "Point", w: 70 }, { h: "Target Date", w: 13 }, { h: "Status", w: 12 },
     { h: "Assigned To (User ID)", w: 20 }, { h: "Remark", w: 40 },
   ],
+  tasks: [
+    { h: "Task No", w: 9 }, { h: "Task", w: 70 }, { h: "Given Date", w: 13 }, { h: "Assigned To (User ID)", w: 22 }, { h: "Assigned By (User ID)", w: 22 },
+    { h: "Source", w: 22 }, { h: "Target Date", w: 13 }, { h: "Status", w: 12 }, { h: "Remark", w: 40 },
+  ],
+  managers: [
+    { h: "User ID", w: 18 }, { h: "Full Name", w: 28 }, { h: "Manager (User ID)", w: 20 },
+  ],
 };
-const DATE_HEADERS = new Set(["Raised Date", "Closed Date", "Target Date", "MOM Date"]);
-export const SHEET_NAME: Record<BulkKind, string> = { tickets: "Tickets", issues: "Issues", mom: "MOM" };
+const DATE_HEADERS = new Set(["Raised Date", "Closed Date", "Target Date", "MOM Date", "Given Date"]);
+export const SHEET_NAME: Record<BulkKind, string> = { tickets: "Tickets", issues: "Issues", mom: "MOM", tasks: "Tasks", managers: "Managers" };
 
 const ymd = (v: unknown) => (typeof v === "string" && v ? v.slice(0, 10) : "");
 const who = (login: unknown, name: unknown) => String(login || name || "");
@@ -61,6 +70,21 @@ export async function exportRows(kind: BulkKind, me: { id: string; role: string 
     return rows.map((r) => [Number(r.issue_no), r.type, r.title, r.description, r.priority, r.status, r.erp_module,
       toDate(ymd(r.raised_on)), toDate(ymd(r.closed_on)), who(r.a_login, r.a_name)]);
   }
+  if (kind === "tasks") {
+    const rows = await query<any>(
+      `${TEAM_CTE}
+       SELECT t.task_no, t.task, CONVERT(varchar(10), t.given_date, 23) AS given_on, a.login_id AS a_login, a.full_name AS a_name,
+              b.login_id AS b_login, b.full_name AS b_name, t.source, CONVERT(varchar(10), t.target_date, 23) AS target_on, t.status, t.remark
+         FROM dbo.tasks t JOIN dbo.users a ON a.id = t.assigned_to JOIN dbo.users b ON b.id = t.assigned_by
+        ${me.role === "admin" ? "" : "WHERE t.assigned_to=@me OR t.assigned_by=@me OR t.assigned_to IN (SELECT id FROM team)"}
+        ORDER BY t.task_no ${TEAM_OPT}`, { me: me.id });
+    return rows.map((r) => [Number(r.task_no), r.task, toDate(ymd(r.given_on)), who(r.a_login, r.a_name), who(r.b_login, r.b_name), r.source, toDate(ymd(r.target_on)), r.status, r.remark]);
+  }
+  if (kind === "managers") {
+    const rows = await query<any>(
+      `SELECT u.login_id, u.full_name, m.login_id AS m_login, m.full_name AS m_name FROM dbo.users u LEFT JOIN dbo.users m ON m.id = u.manager_id WHERE u.active=1 ORDER BY u.full_name`);
+    return rows.map((r) => [r.login_id, r.full_name, r.m_login || r.m_name || ""]);
+  }
   const rows = await query<any>(
     `SELECT m.sr_no, CONVERT(varchar(10), m.mom_date, 23) AS mom_on, m.point, CONVERT(varchar(10), m.target_date, 23) AS target_on,
             m.status, a.login_id AS a_login, a.full_name AS a_name, m.remark
@@ -73,6 +97,8 @@ const EXAMPLES: Record<BulkKind, any[]> = {
   tickets: ["", "IT", "Hardware", "Medium", "Open", "Printer in accounts is not printing", "", "", "", "", "ru005", toDate("2026-11-20"), "", "", ""],
   issues: ["", "ERP", "Sales invoice print format wrong", "Details here", "High", "Open", "Sales", toDate("2026-11-20"), "", ""],
   mom: ["", toDate("2026-11-20"), "Share the backup plan with management", toDate("2026-12-05"), "Open", "", ""],
+  tasks: ["", "Share the Q3 review deck", toDate("2026-11-25"), "ru005", "", "QBR", toDate("2026-12-05"), "Open", ""],
+  managers: ["ru005", "Example Person", "ru001"],
 };
 
 export async function buildWorkbook(kind: BulkKind, data: any[][] | null, lists?: Awaited<ReturnType<typeof getMasterLists>>) {
@@ -106,14 +132,15 @@ export async function buildWorkbook(kind: BulkKind, data: any[][] | null, lists?
     info.getRow(info.rowCount).font = { bold: true };
     add("Type", "IT, ERP");
     add("Priority", PRIORITIES.join(", "));
-    add("Status", (kind === "mom" ? MOM_STATUSES : STATUSES).join(", "));
+    if (kind !== "managers") add("Status", (kind === "mom" ? MOM_STATUSES : kind === "tasks" ? TASK_STATUSES : STATUSES).join(", "));
     if (lists && kind === "tickets") {
       add("Category (IT)", lists.it_category.join(", "));
       add("Category (ERP)", lists.erp_category.join(", "));
       add("Unit", lists.unit.join(", "));
       add("Department", lists.department.join(", "));
     }
-    if (lists && kind !== "mom") add("ERP Module", lists.erp_module.join(", "));
+    if (lists && kind === "tasks") add("Source", lists.task_source.join(", "));
+    if (lists && (kind === "tickets" || kind === "issues")) add("ERP Module", lists.erp_module.join(", "));
   }
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
@@ -171,13 +198,14 @@ export async function readSheet(buf: Buffer, kind: BulkKind) {
   headerRow.eachCell((c, n) => {
     idx[cellText(c.value).toLowerCase()] = n;
   });
-  const missing = want.filter((h) => !idx[h.toLowerCase()] && !/No$/.test(h));
+  const optional = (h: string) => /No$/.test(h) || h === "Full Name";
+  const missing = want.filter((h) => !idx[h.toLowerCase()] && !optional(h));
   if (missing.length) throw new HttpError(400, `Wrong columns. Missing: ${missing.join(", ")}. Download the template and keep its headings.`);
   const rows: { n: number; get: (h: string) => string }[] = [];
   ws.eachRow((row, n) => {
     if (n === 1) return;
     const get = (h: string) => (idx[h.toLowerCase()] ? cellText(row.getCell(idx[h.toLowerCase()]).value) : "");
-    if (want.some((h) => !/No$/.test(h) && get(h))) rows.push({ n, get });
+    if (want.some((h) => !optional(h) && get(h))) rows.push({ n, get });
   });
   if (!rows.length) throw new HttpError(400, "No rows found under the headings");
   if (rows.length > MAX_IMPORT_ROWS) throw new HttpError(400, `Too many rows (${rows.length}). Import at most ${MAX_IMPORT_ROWS} at a time.`);
@@ -196,6 +224,81 @@ export async function importRows(kind: BulkKind, buf: Buffer, me: { id: string }
   const lists = await getMasterLists();
   const errors: string[] = [];
   const out: any[] = [];
+
+  if (kind === "tasks") {
+    for (const { n, get } of rows) {
+      const errs: string[] = [];
+      const task = get("Task").slice(0, 1000);
+      if (task.length < 3) errs.push("Task is required");
+      const toRaw = get("Assigned To (User ID)");
+      const to = toRaw ? find(toRaw, false) : undefined;
+      if (!to) errs.push(toRaw ? `Assigned To "${toRaw}" is not an active user` : "Assigned To is required");
+      const byRaw = get("Assigned By (User ID)");
+      const by = byRaw ? find(byRaw, false) : undefined;
+      if (byRaw && !by) errs.push(`Assigned By "${byRaw}" is not an active user`);
+      const source = get("Source");
+      if (source && !lists.task_source.includes(source)) errs.push(`Source "${source}" is not in the Masters list`);
+      const status = pick(get("Status") || "Open", TASK_STATUSES);
+      if (!status) errs.push(`Status must be one of ${TASK_STATUSES.join(", ")}`);
+      const given = parseDate(get("Given Date"), "Given Date", errs) || today();
+      if (given > today()) errs.push("Given Date cannot be in the future");
+      const target = parseDate(get("Target Date"), "Target Date", errs);
+      out.push({ task, to: to?.id, by: by?.id ?? me.id, source: source || null, status, given, target, remark: get("Remark").slice(0, 1000) || null, done: status === "Done" ? today() : null });
+      if (errs.length) errors.push(...errs.map((e) => `Row ${n}: ${e}`));
+    }
+    if (errors.length) return { count: 0, errors: errors.slice(0, 60) };
+    if (dry) return { count: out.length, errors: [] };
+    await query(
+      `SET XACT_ABORT ON; BEGIN TRAN;
+       DECLARE @ids TABLE (id UNIQUEIDENTIFIER);
+       INSERT INTO dbo.tasks (task, given_date, assigned_to, assigned_by, source, target_date, status, remark, done_date)
+       OUTPUT INSERTED.id INTO @ids
+       SELECT task, given, [to], [by], source, target, status, remark, done
+         FROM OPENJSON(@rows) WITH (task nvarchar(1000) '$.task', given date '$.given', [to] uniqueidentifier '$.to', [by] uniqueidentifier '$.by', source nvarchar(100) '$.source',
+              target date '$.target', status nvarchar(20) '$.status', remark nvarchar(1000) '$.remark', done date '$.done');
+       INSERT INTO dbo.task_events (task_id, actor_id, kind, old_value, new_value) SELECT id, @me, 'created', NULL, 'Imported from Excel' FROM @ids;
+       COMMIT;`,
+      { rows: JSON.stringify(out), me: me.id }
+    );
+    return { count: out.length, errors: [] };
+  }
+
+  if (kind === "managers") {
+    const all = await query<{ id: string; login_id: string | null; manager_id: string | null }>("SELECT id, login_id, manager_id FROM dbo.users");
+    const mgr = new Map(all.map((u) => [u.id, u.manager_id]));
+    const changes: { id: string; manager: string | null }[] = [];
+    for (const { n, get } of rows) {
+      const errs: string[] = [];
+      const uRaw = get("User ID");
+      const u = uRaw ? find(uRaw, false) : undefined;
+      if (!u) errs.push(`User "${uRaw}" is not an active user`);
+      const mRaw = get("Manager (User ID)");
+      const m = mRaw ? find(mRaw, false) : undefined;
+      if (mRaw && !m) errs.push(`Manager "${mRaw}" is not an active user`);
+      if (u && m && u.id === m.id) errs.push("A person cannot be their own manager");
+      if (u && !errs.length) {
+        mgr.set(u.id, m?.id ?? null);
+        changes.push({ id: u.id, manager: m?.id ?? null });
+      }
+      if (errs.length) errors.push(...errs.map((e) => `Row ${n}: ${e}`));
+    }
+    // a reporting chain must never loop back on itself
+    for (const c of changes) {
+      let cur: string | null | undefined = c.manager, hops = 0;
+      while (cur && hops++ < 60) {
+        if (cur === c.id) { const who = people.find((p) => p.id === c.id); errors.push(`${who?.login_id || who?.full_name}: the reporting chain loops back on itself`); break; }
+        cur = mgr.get(cur);
+      }
+    }
+    if (errors.length) return { count: 0, errors: errors.slice(0, 60) };
+    if (dry) return { count: changes.length, errors: [] };
+    await query(
+      `UPDATE u SET u.manager_id = j.manager FROM dbo.users u
+         JOIN OPENJSON(@rows) WITH (id uniqueidentifier '$.id', manager uniqueidentifier '$.manager') j ON j.id = u.id`,
+      { rows: JSON.stringify(changes) }
+    );
+    return { count: changes.length, errors: [] };
+  }
 
   for (const { n, get } of rows) {
     const errs: string[] = [];

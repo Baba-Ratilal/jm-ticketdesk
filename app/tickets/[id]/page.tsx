@@ -142,7 +142,7 @@ function TicketView() {
     return (
       <div className="card empty">
         <b>Ticket not found</b>
-        <Link href="/" className="btn" style={{ marginTop: 8 }}>
+        <Link href="/support" className="btn" style={{ marginTop: 8 }}>
           Back
         </Link>
       </div>

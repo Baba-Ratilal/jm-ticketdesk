@@ -264,3 +264,14 @@ No SQL script is needed for this version.
 - **Export to Excel** (IT team + admins) on Tickets, Issues and MOM downloads everything (IT-team members get their own queue plus unassigned tickets).
 - **Import from Excel** (admins): click **Import template**, fill it, then **Import from Excel**. The file is checked first; if any row is wrong nothing is imported and every problem is listed with its row number. Imported tickets/issues use the Raised Date and Closed Date from the file; "Raised By" defaults to the admin doing the import. Users, units, departments, categories and ERP modules must already exist (Users / Masters).
 - **Device requests — approval emails:** the approver whose turn it is gets an email with the request and a *Review & decide* link: Department Head → HR → Management. The requester is mailed on rejection or full approval, and the IT team is mailed to issue the devices. This uses the same `MS_*` / `MS_SENDER` mail settings as the daily digest; without them nothing is sent and the request history says so. **Each approver needs an email address** — admins can now set it for every user on the Users page. Purpose is required for every employee row.
+
+## Task Manager (new home of the app)
+
+**Run `deploy\upgrade-tasks.sql` in SSMS BEFORE updating the app** (after `upgrade-masters.sql`). It adds the reporting line (`manager_id`) to users, the tasks tables, and the "Task sources" master list (QBR, MBR, Annual Business Review… — edit under Masters).
+
+- **Menu:** Overview · Tasks · Support (admins also: Masters, Users). *Support* opens the whole ticketing area (My tickets, New ticket, Overview, Tickets, My work, Issues, MOM, Device requests) with a "← Tasks" link back.
+- **Tasks:** one Excel-style grid. Anyone can give a task to anyone; the given date is automatic. The task, person and source are locked — only an admin can edit or delete. The person it is for sets Status (Open / In Progress / Done / **Not mine**), Remark and Target date; the giver can also move the target date. Every target-date change is kept (old dates show struck through) and *History* shows remark and status changes.
+- **Who sees what:** the person, whoever gave it, every manager above the person (any depth), and admins.
+- **Hierarchy:** admin sets *Manager* per person on the Users page, or imports it: Users → *Import template* (columns: User ID, Full Name, Manager (User ID)) → *Import from Excel*. Blank manager = no manager. Loops are refused.
+- **Overview:** my numbers, what I gave, and (for managers) the team with a team-member picker.
+- **Excel:** Tasks has Export for everyone (own visible tasks) and Import for admins (Task, Given Date, Assigned To, Assigned By, Source, Target Date, Status, Remark).

@@ -79,6 +79,23 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       }
     }
 
+    // who this person reports to (a manager sees everything below them)
+    if (body.manager_id !== undefined) {
+      const m = body.manager_id ? String(body.manager_id) : null;
+      if (m) {
+        if (!isGuid(m)) throw new HttpError(400, "Choose a manager");
+        if (m === params.id) throw new HttpError(400, "A person cannot be their own manager");
+        const [mu] = await query("SELECT id FROM dbo.users WHERE id=@id AND active=1", { id: m });
+        if (!mu) throw new HttpError(400, "Choose an active manager");
+        // refuse a loop: the new manager must not already report (directly or not) to this person
+        const [loop] = await query<{ n: number }>(
+          `;WITH up AS (SELECT id, manager_id FROM dbo.users WHERE id=@m UNION ALL SELECT u.id, u.manager_id FROM dbo.users u JOIN up ON u.id = up.manager_id)
+           SELECT COUNT(*) AS n FROM up WHERE id=@me OPTION (MAXRECURSION 60)`, { m, me: params.id });
+        if ((loop?.n ?? 0) > 0) throw new HttpError(400, "That would make a loop — that person already reports to this one");
+      }
+      extra.push("manager_id=@mgr"); ep.mgr = m;
+    }
+
     // never leave the system without an active admin
     const losesAdmin = u.role === "admin" && u.active && (newRole !== "admin" || !newActive);
     if (losesAdmin) {

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { BULK_KINDS, buildWorkbook, exportRows, importRows, type BulkKind } from "@/lib/bulk";
 import { getMasterLists } from "@/lib/masters";
 import { handle, HttpError } from "@/lib/http";
-import { requireAdmin, requireStaff } from "@/lib/server";
+import { requireAdmin, requireStaff, requireUser } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,8 +17,9 @@ const kindOf = async (ctx: { params: Promise<{ kind: string }> }): Promise<BulkK
 /** Download all rows as an Excel file, or (?template=1) an empty template with a Read-me sheet. */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ kind: string }> }) {
   return handle(async () => {
-    const me = await requireStaff(req);
     const kind = await kindOf(ctx);
+    // tasks: anyone signed in (sees what they may see); managers list: admin; tickets / issues / MOM: IT team + admin
+    const me = kind === "tasks" ? await requireUser(req) : kind === "managers" ? await requireAdmin(req) : await requireStaff(req);
     const template = req.nextUrl.searchParams.get("template") === "1";
     if (template && me.role !== "admin") throw new HttpError(403, "Admins only");
     const buf = template ? await buildWorkbook(kind, null, await getMasterLists()) : await buildWorkbook(kind, await exportRows(kind, me));

@@ -12,6 +12,7 @@ const FALLBACK: MasterLists = {
   it_category: [...CATEGORIES.IT],
   erp_category: [...CATEGORIES.ERP],
   erp_module: [...ERP_MODULES],
+  task_source: [],
 };
 
 /** The admin-managed dropdown lists (units, departments, ...). Shows the built-in lists until they load. */

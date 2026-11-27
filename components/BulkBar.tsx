@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 type Check = { count: number; errors: string[] };
 
 /** Export to Excel (staff) and bulk import from Excel (admin). */
-export default function BulkBar({ kind, label, isAdmin, onImported }: { kind: "tickets" | "issues" | "mom"; label: string; isAdmin: boolean; onImported: () => void }) {
+export default function BulkBar({ kind, label, isAdmin, onImported }: { kind: "tickets" | "issues" | "mom" | "tasks" | "managers"; label: string; isAdmin: boolean; onImported: () => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [check, setCheck] = useState<Check | null>(null);

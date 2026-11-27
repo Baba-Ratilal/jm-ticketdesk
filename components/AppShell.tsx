@@ -44,20 +44,31 @@ export default function AppShell({
 
   const isAdmin = profile.role === "admin";
   const isStaff = profile.role !== "user";
-  const items = [
-    { href: "/", label: "My tickets", icon: "tickets" },
-    { href: "/tickets/new", label: "New ticket", icon: "plus" },
-    ...(isStaff ? [{ href: "/admin", label: "Overview", icon: "chart" }] : []),
-    ...(isStaff ? [{ href: "/tickets", label: "Tickets", icon: "tickets" }] : []),
-    ...(isStaff ? [{ href: "/work", label: "My work", icon: "check" }] : []),
-    ...(isStaff ? [{ href: "/issues", label: "Issues", icon: "issues" }] : []),
-    ...(isStaff ? [{ href: "/mom", label: "MOM", icon: "mom" }] : []),
-    { href: "/device-requests", label: "Device requests", icon: "device" },
-    ...(isAdmin ? [{ href: "/admin/masters", label: "Masters", icon: "masters" }] : []),
-    ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
-  ];
+  // the Support area (ticketing) has its own menu; everything else is the task manager
+  const inSupport =
+    path === "/admin" || ["/support", "/tickets", "/issues", "/device-requests", "/work", "/mom"].some((p) => path === p || path.startsWith(p + "/"));
+  const items = inSupport
+    ? [
+        { href: "/", label: "← Tasks", icon: "check" },
+        { href: "/support", label: "My tickets", icon: "tickets" },
+        { href: "/tickets/new", label: "New ticket", icon: "plus" },
+        ...(isStaff ? [{ href: "/admin", label: "Overview", icon: "chart" }] : []),
+        ...(isStaff ? [{ href: "/tickets", label: "Tickets", icon: "tickets" }] : []),
+        ...(isStaff ? [{ href: "/work", label: "My work", icon: "check" }] : []),
+        ...(isStaff ? [{ href: "/issues", label: "Issues", icon: "issues" }] : []),
+        ...(isStaff ? [{ href: "/mom", label: "MOM", icon: "mom" }] : []),
+        { href: "/device-requests", label: "Device requests", icon: "device" },
+      ]
+    : [
+        { href: "/", label: "Overview", icon: "chart" },
+        { href: "/tasks", label: "Tasks", icon: "check" },
+        { href: "/support", label: "Support", icon: "tickets" },
+        ...(isAdmin ? [{ href: "/admin/masters", label: "Masters", icon: "masters" }] : []),
+        ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: "users" }] : []),
+      ];
   const isOn = (href: string) =>
     href === "/" ? path === "/"
+    : href === "/support" ? path === href
     : href === "/tickets/new" ? path === href
     : href === "/tickets" ? path === href || (path.startsWith("/tickets/") && path !== "/tickets/new")
     : href === "/admin" ? path === href
@@ -77,7 +88,7 @@ export default function AppShell({
             <Logo size={34} />
             <div>
               <div className="bn">JM TicketDesk</div>
-              <div className="bs">IT &amp; ERP support</div>
+              <div className="bs">Tasks &amp; support</div>
             </div>
           </Link>
 
@@ -133,7 +144,7 @@ export default function AppShell({
           {items.map((i) => (
             <Link key={i.href} href={i.href} className={`tb ${isOn(i.href) ? "on" : ""}`}>
               <Icon name={i.icon} size={20} />
-              {i.label.replace("My tickets", "Mine")}
+              {i.label.replace("My tickets", "Mine").replace("← Tasks", "Tasks")}
             </Link>
           ))}
         </nav>

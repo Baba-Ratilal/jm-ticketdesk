@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   return handle(async () => {
     await requireAdmin(req);
     const users = await query(
-      "SELECT id, login_id, email, source, full_name, role, phone, unit, department, designation, active, last_login, must_change_password FROM dbo.users ORDER BY full_name"
+      "SELECT id, login_id, email, source, full_name, role, phone, unit, department, designation, manager_id, active, last_login, must_change_password FROM dbo.users ORDER BY full_name"
     );
     return { users };
   });

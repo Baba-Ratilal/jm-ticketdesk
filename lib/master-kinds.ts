@@ -6,6 +6,7 @@ export const MASTER_KINDS = [
   { kind: "it_category", label: "IT categories", one: "IT category" },
   { kind: "erp_category", label: "ERP categories", one: "ERP category" },
   { kind: "erp_module", label: "ERP modules", one: "ERP module" },
+  { kind: "task_source", label: "Task sources", one: "task source" },
 ] as const;
 export type MasterKind = (typeof MASTER_KINDS)[number]["kind"];
 export type MasterLists = Record<MasterKind, string[]>;

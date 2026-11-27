@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppShell, { useProfile } from "@/components/AppShell";
+import BulkBar from "@/components/BulkBar";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { fmtDate, type Profile } from "@/lib/constants";
@@ -37,7 +38,7 @@ function Users() {
     }
   }
 
-  async function patch(u: Profile, body: { role?: string; active?: boolean; phone?: string; email?: string; full_name?: string; unit?: string; department?: string; designation?: string }, confirmText?: string) {
+  async function patch(u: Profile, body: { role?: string; active?: boolean; phone?: string; email?: string; manager_id?: string | null; full_name?: string; unit?: string; department?: string; designation?: string }, confirmText?: string) {
     if (confirmText && !confirm(confirmText)) return;
     try {
       await api(`/api/users/${u.id}`, { method: "PATCH", body: JSON.stringify(body) });
@@ -94,6 +95,8 @@ function Users() {
           <input className="in" placeholder="Search name or user ID" aria-label="Search users" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       </div>
+
+      <BulkBar kind="managers" label="reporting lines" isAdmin onImported={load} />
 
       {auto && (
         <div className="card pad form" style={{ marginBottom: 14 }}>
@@ -192,7 +195,7 @@ function Users() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Unit / Dept / Designation</th>
+              <th>Unit / Dept / Designation / Manager</th>
               <th>Last sign-in</th>
               <th>Role</th>
               <th>Phone</th>
@@ -223,6 +226,10 @@ function Users() {
                         </select>
                       );
                     })}
+                    <select className="in sel" style={{ padding: "5px 8px" }} aria-label={`Manager of ${u.full_name || u.login_id}`} value={u.manager_id || ""} onChange={(e) => patch(u, { manager_id: e.target.value || null })}>
+                      <option value="">Manager: —</option>
+                      {users.filter((m) => m.id !== u.id && m.active !== false).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.login_id}</option>)}
+                    </select>
                   </div>
                 </td>
                 <td data-l="Last sign-in">{u.last_login ? fmtDate(u.last_login) : "—"}</td>

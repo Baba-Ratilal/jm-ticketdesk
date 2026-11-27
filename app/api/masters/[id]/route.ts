@@ -15,6 +15,7 @@ const USED_IN: Record<MasterKind, { table: string; col: string; where?: string }
   it_category: [{ table: "dbo.tickets", col: "category", where: "type='IT'" }],
   erp_category: [{ table: "dbo.tickets", col: "category", where: "type='ERP'" }],
   erp_module: [{ table: "dbo.tickets", col: "erp_module" }, { table: "dbo.issues", col: "erp_module" }],
+  task_source: [{ table: "dbo.tasks", col: "source" }],
 };
 
 async function load(id: string) {

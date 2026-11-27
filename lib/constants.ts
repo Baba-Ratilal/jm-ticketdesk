@@ -80,6 +80,7 @@ export type Profile = {
   unit: string | null;
   department: string | null;
   designation?: string | null;
+  manager_id?: string | null;
   active?: boolean;
   last_login?: string | null;
   source?: "local" | "erp";
